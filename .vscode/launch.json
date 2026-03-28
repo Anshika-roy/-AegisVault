@@ -1,0 +1,43 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Run App (Edge - Direct File)",
+            "file": "${workspaceFolder}/aegisvault-stone-mist.html"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Run App (Chrome - Direct File)",
+            "file": "${workspaceFolder}/aegisvault-stone-mist.html"
+        },
+        {
+            "name": "Run App (Edge + Localhost)",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://127.0.0.1:5500/aegisvault-stone-mist.html",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Start local web server (5500)"
+        },
+        {
+            "name": "Attach to Chrome",
+            "port": 9222,
+            "request": "attach",
+            "type": "chrome",
+            "webRoot": "${workspaceFolder}"
+        },
+        {
+            "name": "Launch Chrome",
+            "request": "launch",
+            "type": "chrome",
+            "url": "http://127.0.0.1:5500/aegisvault-stone-mist.html",
+            "preLaunchTask": "Start local web server (5500)",
+            "webRoot": "${workspaceFolder}"
+        }
+    ]
+}

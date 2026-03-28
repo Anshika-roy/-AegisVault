@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QuickNotes — Simple Notes App</title>
+<title>QuickNotes - Simple Notes App</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -73,26 +73,30 @@
   body { background: #FFFFFF; }
 
   /* ═══════════════════════════════
-     FAKE UI — Notes App
+    FAKE UI - Notes App
   ═══════════════════════════════ */
   #fake-ui { font-family: 'Inter', sans-serif; }
   .note-card {
-    background: #FFFFFF;
-    border-radius: 12px;
+     background: #fff;
+
+    border-radius: 4px;
+
     padding: 12px;
     border: 1px solid #E0E0E0;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     cursor: pointer;
-    border-top: 1px solid #E0E0E0;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    border-top: 4px solid;
+
+    transition: box-shadow 0.15s;
   }
+  
   .note-card:hover {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     transform: translateY(-1px);
   }
 
   /* ═══════════════════════════════
-     VAULT UI — Cyber Noir
+    VAULT UI - Cyber Noir
   ═══════════════════════════════ */
   #vault-ui { font-family: 'Inter', sans-serif; }
 
@@ -237,7 +241,7 @@
 <body class="min-h-screen">
 
 <!-- ═══════════════════════════════════════════════════
-     LAYER 1: FAKE UI — QuickNotes App
+    LAYER 1: FAKE UI - QuickNotes App
 ════════════════════════════════════════════════════ -->
 <div id="fake-ui" class="min-h-screen" style="background:#FFFFFF; display:block;">
 
@@ -288,7 +292,7 @@
         <div style="font-size:10px; color:#9CA3AF; margin-top:10px;">Sun, 7:30 PM</div>
       </div>
       <div class="note-card" style="border-top-color:#E0E0E0;">
-        <div style="font-weight:600; font-size:14px; color:#1F2937; margin-bottom:6px;">Recipe — Dal Tadka</div>
+        <div style="font-weight:600; font-size:14px; color:#1F2937; margin-bottom:6px;">Recipe - Dal Tadka</div>
         <div style="font-size:12px; color:#6B7280; line-height:1.5;">1 cup lentils, tomatoes, cumin, turmeric, coriander...</div>
         <div style="font-size:10px; color:#9CA3AF; margin-top:10px;">Sat, 6:00 PM</div>
       </div>
@@ -299,7 +303,7 @@
       </div>
     </div>
 
-    <!-- FAB — secret long-press trigger -->
+    <!-- FAB - secret long-press trigger -->
     <button id="secret-trigger"
       title="New Note"
       style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:16px; background:#FFFFFF; border:1px solid #E0E0E0; cursor:pointer; box-shadow:0 8px 18px rgba(15,23,42,0.12); display:flex; align-items:center; justify-content:center; transition:transform 0.1s;"
@@ -316,23 +320,23 @@
 
 
 <!-- ═══════════════════════════════════════════════════
-     UNLOCK OVERLAY — Transition Animation
+    UNLOCK OVERLAY - Transition Animation
 ════════════════════════════════════════════════════ -->
 <div id="unlock-overlay" class="fixed inset-0 flex flex-col items-center justify-center" style="display:none!important;">
   <div class="unlock-ring">
     <div class="ring-progress" id="overlay-ring"></div>
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-      <rect x="3" y="11" width="18" height="11" rx="2" stroke="#8B5CF6" stroke-width="1.5"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round"/>
+      <rect x="3" y="11" width="18" height="11" rx="2" stroke="#64748B" stroke-width="1.5"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#64748B" stroke-width="1.5" stroke-linecap="round"/>
     </svg>
   </div>
-  <div style="margin-top:24px; font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(139,92,246,0.7); letter-spacing:0.15em;" id="unlock-text">AUTHENTICATING...</div>
-  <div style="margin-top:8px; font-size:10px; color:rgba(139,92,246,0.4); font-family:'JetBrains Mono',monospace; letter-spacing:0.1em;" id="unlock-sub">INITIALIZING AEGISVAULT</div>
+  <div style="margin-top:24px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#334155; letter-spacing:0.15em;" id="unlock-text">AUTHENTICATING...</div>
+  <div style="margin-top:8px; font-size:10px; color:#94A3B8; font-family:'JetBrains Mono',monospace; letter-spacing:0.1em;" id="unlock-sub">INITIALIZING AEGISVAULT</div>
 </div>
 
 
 <!-- ═══════════════════════════════════════════════════
-     LAYER 2: VAULT UI — AegisVault
+    LAYER 2: VAULT UI - AegisVault
 ════════════════════════════════════════════════════ -->
 <div id="vault-ui" class="vault-bg min-h-screen" style="display:none;">
 
@@ -370,9 +374,9 @@
     <div class="rounded mb-6 p-3 flex items-center justify-between" style="background:#FFFFFF; border:1px solid #E5E7EB;">
       <div class="flex items-center gap-3">
         <span class="status-dot" style="background:#22C55E; animation:ping 2s infinite; box-shadow:0 0 8px rgba(34,197,94,0.35);"></span>
-        <span class="text-xs font-mono tracking-widest" style="color:#334155;">VAULT SECURED — ALL SYSTEMS NOMINAL</span>
+        <span class="text-xs font-mono tracking-widest" style="color:#334155;">VAULT SECURED - ALL SYSTEMS NOMINAL</span>
       </div>
-      <div class="text-xs font-mono" style="color:#64748B;" id="sys-time">—</div>
+      <div class="text-xs font-mono" style="color:#64748B;" id="sys-time">-</div>
     </div>
 
     <!-- Location Banner -->
@@ -422,9 +426,9 @@
         <!-- Geo Status -->
         <div class="rounded-lg p-4 flex-1" style="background:#FFFFFF; border:1px solid #E5E7EB;">
           <div class="text-xs font-mono tracking-widest mb-3" style="color:#64748B;">GEOLOCATION</div>
-          <div id="geo-lat" class="text-sm font-mono mb-1" style="color:#334155;">LAT: —</div>
-          <div id="geo-lng" class="text-sm font-mono mb-1" style="color:#334155;">LNG: —</div>
-          <div id="geo-acc" class="text-xs font-mono" style="color:#64748B;">ACC: —</div>
+          <div id="geo-lat" class="text-sm font-mono mb-1" style="color:#334155;">LAT: -</div>
+          <div id="geo-lng" class="text-sm font-mono mb-1" style="color:#334155;">LNG: -</div>
+          <div id="geo-acc" class="text-xs font-mono" style="color:#64748B;">ACC: -</div>
         </div>
         <!-- Upload Count -->
         <div class="rounded-lg p-4" style="background:#FFFFFF; border:1px solid #E5E7EB;">
@@ -478,14 +482,14 @@
     </div>
 
     <div class="text-center mt-6 pb-4">
-      <div class="text-xs font-mono" style="color:#94A3B8; letter-spacing:0.2em;">AEGISVAULT · ENCRYPTED · <span id="session-id">—</span></div>
+      <div class="text-xs font-mono" style="color:#94A3B8; letter-spacing:0.2em;">AEGISVAULT · ENCRYPTED · <span id="session-id">-</span></div>
     </div>
   </div>
 </div>
 
 
 <!-- ═══════════════════════════════════════════════════
-     JAVASCRIPT — Core Logic
+    JAVASCRIPT - Core Logic
 ════════════════════════════════════════════════════ -->
 <script type="module">
 
@@ -504,7 +508,7 @@ const state = {
 };
 
 // ────────────────────────────────────────────────────
-// SECRET TRIGGER — Long-press on the FAB button
+// SECRET TRIGGER - Long-press on the FAB button
 // ────────────────────────────────────────────────────
 const HOLD_DURATION = 2000; // 2-second hold
 let holdTimer = null, holdStart = null, holdAnimFrame = null;
@@ -536,7 +540,7 @@ window.cancelHold = function(reset = true) {
 };
 
 // ────────────────────────────────────────────────────
-// UNLOCK SEQUENCE — Cinematic transition
+// UNLOCK SEQUENCE - Cinematic transition
 // ────────────────────────────────────────────────────
 function triggerUnlock() {
   const overlay = document.getElementById('unlock-overlay');
@@ -620,7 +624,7 @@ window.captureGeo = function() {
     },
     (err) => {
       addLog('GEO', `GPS error: ${err.message}`, 'warn');
-      document.getElementById('geo-text').textContent = 'GPS unavailable — check permissions';
+      document.getElementById('geo-text').textContent = 'GPS unavailable - check permissions';
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
@@ -643,7 +647,7 @@ window.toggleRecord = function() {
     badge.style.background = 'rgba(239,68,68,0.1)';
     badge.style.borderColor = 'rgba(239,68,68,0.3)';
     label.textContent = '⏹ STOP RECORDING';
-    sub.textContent = 'Capturing evidence — tap to stop';
+    sub.textContent = 'Capturing evidence - tap to stop';
     addLog('REC', 'Recording session started. Geolocation tagged.', 'ok');
     captureGeo();
     // Auto-ping geo every 30s during recording
@@ -651,9 +655,9 @@ window.toggleRecord = function() {
   } else {
     btn.classList.remove('recording');
     badge.textContent = 'STANDBY';
-    badge.style.color = '#A78BFA';
-    badge.style.background = 'rgba(139,92,246,0.1)';
-    badge.style.borderColor = 'rgba(139,92,246,0.3)';
+    badge.style.color = '#334155';
+    badge.style.background = '#F8FAFC';
+    badge.style.borderColor = '#D1D5DB';
     label.innerHTML = 'RECORD &amp; SYNC';
     sub.textContent = 'Hold to activate emergency capture';
     addLog('REC', 'Recording session stopped.');
@@ -702,7 +706,7 @@ async function uploadFile(file) {
   addLog('UPLOAD', `Queuing: ${file.name} (${formatBytes(file.size)})`);
 
   if (!isFirebaseReady || !firebaseStorage) {
-    // Demo mode — simulate upload
+    // Demo mode - simulate upload
     addLog('UPLOAD', `[DEMO] Simulating upload for ${file.name}...`, 'warn');
     await simulateUpload(file, metadata);
     return;
@@ -779,13 +783,13 @@ window.initFirebase = async function() {
 // ────────────────────────────────────────────────────
 function addLog(tag, msg, type = 'info') {
   const log = document.getElementById('activity-log');
-  const colors = { info: 'rgba(139,92,246,0.5)', ok: '#10B981', warn: '#F59E0B', err: '#EF4444' };
-  const tagColors = { info: 'rgba(139,92,246,0.4)', ok: 'rgba(16,185,129,0.7)', warn: 'rgba(245,158,11,0.7)', err: 'rgba(239,68,68,0.7)' };
+  const colors = { info: '#475569', ok: '#059669', warn: '#D97706', err: '#DC2626' };
+  const tagColors = { info: '#64748B', ok: '#10B981', warn: '#F59E0B', err: '#EF4444' };
   const time = new Date().toTimeString().split(' ')[0];
   const el = document.createElement('div');
   el.className = 'log-entry pl-3 py-1';
   el.style.color = colors[type];
-  el.innerHTML = `<span style="color:rgba(139,92,246,0.3);">[${time}]</span> <span style="color:${tagColors[type]};">[${tag}]</span> ${msg}`;
+  el.innerHTML = `<span style="color:#94A3B8;">[${time}]</span> <span style="color:${tagColors[type]};">[${tag}]</span> ${msg}`;
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
 }
