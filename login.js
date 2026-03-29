@@ -1,5 +1,5 @@
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { doc, getDoc, getDocFromCache } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { doc, getDoc, getDocFromCache, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { auth, db, isFirestoreOfflineError, toFriendlyFirestoreError } from "./firebase-config.js";
 
 const form = document.getElementById("login-form");
@@ -66,23 +66,51 @@ form.addEventListener("submit", async (event) => {
       }
     }
 
+    let profile;
+
     if (!userDoc.exists()) {
-      throw new Error("User profile not found in Firestore.");
+      setStatus("Creating user profile...", "loading");
+      console.log("User not found → creating...");
+      try {
+        const newProfile = {
+          email: credential.user.email,
+          createdAt: new Date(),
+          role: "victim",
+          name: credential.user.displayName || ""
+        };
+        await setDoc(userRef, newProfile);
+        profile = newProfile;
+        console.log("User created ✅");
+      } catch (createError) {
+        if (!isFirestoreOfflineError(createError)) {
+          throw createError;
+        }
+        setStatus("Offline: sign-in successful. Profile will be created on reconnect.", "loading");
+        profile = { role: "victim", email: credential.user.email };
+      }
+    } else {
+      profile = userDoc.data();
+      console.log("User exists ✅");
     }
 
-    const profile = userDoc.data();
+    // Validate role and redirect
+    if (!profile.role) {
+      throw new Error("User role not set. Contact administrator.");
+    }
 
     if (profile.role === "victim") {
+      setStatus("Redirecting to notes...", "ok");
       window.location.href = "notes.html";
       return;
     }
 
     if (profile.role === "lawyer") {
+      setStatus("Redirecting to dashboard...", "ok");
       window.location.href = "lawyer_dashboard.html";
       return;
     }
 
-    throw new Error("Role is invalid. Contact administrator.");
+    throw new Error("Role '" + profile.role + "' is invalid. Contact administrator.");
   } catch (error) {
     const friendlyError = toFriendlyFirestoreError(error, "Login failed.");
     setStatus(friendlyError, "error");
