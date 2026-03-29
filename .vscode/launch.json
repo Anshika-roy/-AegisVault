@@ -9,19 +9,19 @@
             "type": "msedge",
             "request": "launch",
             "name": "Run App (Edge - Direct File)",
-            "file": "${workspaceFolder}/aegisvault-stone-mist.html"
+            "file": "${workspaceFolder}/index.html"
         },
         {
             "type": "chrome",
             "request": "launch",
             "name": "Run App (Chrome - Direct File)",
-            "file": "${workspaceFolder}/aegisvault-stone-mist.html"
+            "file": "${workspaceFolder}/index.html"
         },
         {
             "name": "Run App (Edge + Localhost)",
             "type": "msedge",
             "request": "launch",
-            "url": "http://127.0.0.1:5500/aegisvault-stone-mist.html",
+            "url": "http://127.0.0.1:5500/index.html",
             "webRoot": "${workspaceFolder}",
             "preLaunchTask": "Start local web server (5500)"
         },
@@ -36,7 +36,7 @@
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
-            "url": "http://127.0.0.1:5500/aegisvault-stone-mist.html",
+            "url": "http://127.0.0.1:5500/index.html",
             "preLaunchTask": "Start local web server (5500)",
             "webRoot": "${workspaceFolder}"
         }

@@ -414,7 +414,7 @@
               </button>
               <label class="py-2 px-3 rounded text-xs font-mono tracking-wider text-center cursor-pointer" style="background:#FFFFFF; border:1px solid #D1D5DB; color:#334155; transition:all 0.2s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='#FFFFFF'">
                 ↑ UPLOAD FILE
-                <input type="file" accept="image/*,audio/*,video/*,.pdf" multiple style="display:none" onchange="handleFileUpload(this.files)">
+                <input id="file-input" type="file" accept="image/*,audio/*,video/*,.pdf" style="display:none">
               </label>
             </div>
           </div>
@@ -466,6 +466,13 @@
       <button onclick="initFirebase()" class="w-full py-2 rounded text-xs font-mono tracking-wider" style="background:#FFFFFF; border:1px solid #CBD5E1; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='#FFFFFF'">
         ⚡ INITIALIZE FIREBASE
       </button>
+      <button id="upload-button" class="w-full mt-2 py-2 rounded text-xs font-mono tracking-wider" style="background:#334155; border:1px solid #334155; color:#FFFFFF; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#475569'" onmouseout="this.style.background='#334155'">
+        🔒 FORENSIC UPLOAD
+      </button>
+      <div id="status-message" class="mt-2 text-xs font-mono" style="color:#64748B;">Ready</div>
+        <button id="certificate-button" class="w-full mt-2 py-2 rounded text-xs font-mono tracking-wider" style="background:#E2E8F0; border:1px solid #CBD5E1; color:#64748B; cursor:not-allowed;" disabled>
+          GENERATE CERTIFICATE
+        </button>
     </div>
 
     <!-- Activity Log -->
@@ -830,6 +837,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 </script>
+<script src="app.js"></script>
 
 </body>
 </html>
