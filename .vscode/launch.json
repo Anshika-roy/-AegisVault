@@ -6,22 +6,26 @@
     "configurations": [
         
         {
+            "name": "Run App (Edge + Localhost - Register First)",
             "type": "msedge",
             "request": "launch",
-            "name": "Run App (Edge - Direct File)",
-            "file": "${workspaceFolder}/index.html"
+            "url": "http://127.0.0.1:5500/register.html",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Start local web server (5500)"
         },
         {
-            "type": "chrome",
-            "request": "launch",
-            "name": "Run App (Chrome - Direct File)",
-            "file": "${workspaceFolder}/index.html"
-        },
-        {
-            "name": "Run App (Edge + Localhost)",
+            "name": "Run Register (Edge + Localhost)",
             "type": "msedge",
             "request": "launch",
-            "url": "http://127.0.0.1:5500/index.html",
+            "url": "http://127.0.0.1:5500/register.html",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Start local web server (5500)"
+        },
+        {
+            "name": "Run Login (Edge + Localhost)",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://127.0.0.1:5500/login.html",
             "webRoot": "${workspaceFolder}",
             "preLaunchTask": "Start local web server (5500)"
         },
@@ -33,10 +37,10 @@
             "webRoot": "${workspaceFolder}"
         },
         {
-            "name": "Launch Chrome",
+            "name": "Launch Chrome (Register First)",
             "request": "launch",
             "type": "chrome",
-            "url": "http://127.0.0.1:5500/index.html",
+            "url": "http://127.0.0.1:5500/register.html",
             "preLaunchTask": "Start local web server (5500)",
             "webRoot": "${workspaceFolder}"
         }

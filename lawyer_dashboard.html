@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AegisVault - Lawyer Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-xl shadow-sky-900/20">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-semibold">Lawyer Live Feed</h1>
+          <p class="text-sm text-slate-400">Real-time evidence feed from victims who granted legal access.</p>
+        </div>
+        <button id="signout-button" class="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800">Sign Out</button>
+      </div>
+
+      <div id="lawyer-status" class="mt-4 rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-300">Connecting to live feed...</div>
+
+      <div class="mt-5 overflow-x-auto rounded-xl border border-slate-800">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-slate-900/80 text-slate-300">
+            <tr>
+              <th class="px-4 py-3">File Preview</th>
+              <th class="px-4 py-3">SHA-256 Hash</th>
+              <th class="px-4 py-3">GPS Map Link</th>
+              <th class="px-4 py-3">Server Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="live-feed-body" class="divide-y divide-slate-800 bg-slate-950/40"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./lawyer_dashboard.js"></script>
+</body>
+</html>

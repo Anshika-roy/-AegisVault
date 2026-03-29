@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QuickNotes - Simple Notes App</title>
+<meta name="theme-color" content="#334155">
+<link rel="manifest" href="manifest.webmanifest">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 
@@ -408,7 +411,7 @@
             </button>
 
             <!-- Quick Actions -->
-            <div class="grid grid-cols-2 gap-2 mt-3">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
               <button onclick="captureGeo()" class="py-2 px-3 rounded text-xs font-mono tracking-wider" style="background:#FFFFFF; border:1px solid #D1D5DB; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='#FFFFFF'">
                 ◎ PING LOCATION
               </button>
@@ -416,6 +419,12 @@
                 ↑ UPLOAD FILE
                 <input id="file-input" type="file" accept="image/*,audio/*,video/*,.pdf" style="display:none">
               </label>
+              <button id="audio-record-btn" type="button" class="py-2 px-3 rounded text-xs font-mono tracking-wider" style="background:#FFFFFF; border:1px solid #D1D5DB; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='#FFFFFF'">
+                🎙 AUDIO
+              </button>
+              <button id="video-capture-btn" type="button" class="py-2 px-3 rounded text-xs font-mono tracking-wider" style="background:#FFFFFF; border:1px solid #D1D5DB; color:#334155; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='#FFFFFF'">
+                📹 VIDEO
+              </button>
             </div>
           </div>
         </div>
@@ -435,6 +444,7 @@
           <div class="text-xs font-mono tracking-widest mb-2" style="color:#64748B;">SYNCED</div>
           <div class="text-3xl font-mono font-semibold" style="color:#1F2937;" id="sync-count">0</div>
           <div class="text-xs font-mono mt-1" style="color:#94A3B8;">FILES SECURED</div>
+          <div class="text-xs font-mono mt-2" style="color:#64748B;">PENDING: <span id="pending-uploads-count">0</span></div>
         </div>
       </div>
     </div>
@@ -456,6 +466,11 @@
       <div class="flex items-center justify-between mb-3">
         <div class="text-xs font-mono tracking-widest" style="color:#64748B;">FIREBASE CONFIG</div>
         <span class="hex-badge" id="fb-status-badge" style="background:#FEF2F2; color:#DC2626; border:1px solid #FECACA;">NOT CONFIGURED</span>
+      </div>
+      <div class="mb-3">
+        <label for="emergency-contact" class="block text-[10px] font-mono tracking-widest mb-1" style="color:#64748B;">EMERGENCY CONTACT (SMS)</label>
+        <input class="vault-input" id="emergency-contact" placeholder="+919876543210" type="tel">
+        <div id="emergency-contact-warning" class="mt-1 text-[10px] font-mono" style="color:#DC2626; display:none;">Enter a valid number in E.164 format, for example +919876543210.</div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
         <input class="vault-input" id="fb-api-key" placeholder="apiKey" type="password">
@@ -485,6 +500,46 @@
         <div class="log-entry pl-3 py-1" style="color:#475569;">
           <span style="color:#94A3B8;">[BOOT]</span> AegisVault initialized. Stealth mode deactivated.
         </div>
+      </div>
+    </div>
+
+    <!-- Immutable Vault Files -->
+    <div class="rounded-lg mt-4" style="background:#FFFFFF; border:1px solid #E5E7EB;">
+      <div class="p-4 border-b" style="border-color:#E5E7EB;">
+        <div class="text-xs font-mono tracking-widest" style="color:#64748B;">VAULT FILES</div>
+        <div class="text-[10px] font-mono mt-1" style="color:#94A3B8;">IMMUTABLE: Uploads are view-only once secured.</div>
+      </div>
+      <div id="vault-files-list" class="p-3 space-y-2"></div>
+    </div>
+
+    <!-- Vault History -->
+    <div class="rounded-lg mt-4" style="background:#FFFFFF; border:1px solid #E5E7EB;">
+      <div class="flex items-center justify-between p-4 border-b" style="border-color:#E5E7EB;">
+        <div class="text-xs font-mono tracking-widest" style="color:#64748B;">VAULT HISTORY</div>
+        <button type="button" onclick="window.fetchVaultHistory && window.fetchVaultHistory()" class="text-xs font-mono" style="color:#64748B; background:none; border:none; cursor:pointer;">REFRESH</button>
+      </div>
+      <div class="p-3 overflow-x-auto">
+        <table class="w-full text-xs font-mono" style="color:#334155; border-collapse:collapse;">
+          <thead>
+            <tr style="text-align:left; color:#64748B;">
+              <th class="py-2 pr-3">Time</th>
+              <th class="py-2 pr-3">GPS</th>
+              <th class="py-2">Hash</th>
+            </tr>
+          </thead>
+          <tbody id="vault-history-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg mt-4" style="background:#FFFFFF; border:1px solid #E5E7EB;">
+      <div class="flex items-center justify-between p-4 border-b" style="border-color:#E5E7EB;">
+        <div class="text-xs font-mono tracking-widest" style="color:#64748B;">WITNESS MODE</div>
+        <button id="witness-mode-btn" type="button" class="text-xs font-mono" style="color:#334155; background:none; border:none; cursor:pointer;">GENERATE CO-SIGN QR</button>
+      </div>
+      <div class="p-3 flex items-center gap-3">
+        <img id="witness-qr-image" alt="Witness QR" style="width:120px; height:120px; border:1px solid #E2E8F0; display:none;">
+        <div class="text-xs font-mono" style="color:#64748B;">Scan this QR from a second device to co-sign the current evidence packet.</div>
       </div>
     </div>
 
@@ -676,9 +731,14 @@ window.toggleRecord = function() {
 // FILE UPLOAD (Firebase Storage)
 // ────────────────────────────────────────────────────
 window.handleFileUpload = async function(files) {
-  if (!files || files.length === 0) return;
-  for (const file of Array.from(files)) {
-    await uploadFile(file);
+  if (!files || files.length === 0) {
+    return;
+  }
+
+  if (window.handleForensicFiles) {
+    await window.handleForensicFiles(files, 'legacy-dropzone');
+  } else {
+    addLog('UPLOAD', 'Forensic engine not ready yet. Try again in a moment.', 'warn');
   }
 };
 
@@ -696,59 +756,6 @@ window.dragOver = function(e) {
 window.dragLeave = function() {
   document.getElementById('drop-zone').classList.remove('drag-over');
 };
-
-async function uploadFile(file) {
-  const timestamp = new Date().toISOString();
-  const geo = state.currentGeo || {};
-  const metadata = {
-    customMetadata: {
-      timestamp,
-      sessionId: state.sessionId,
-      lat: geo.lat?.toString() || 'unknown',
-      lng: geo.lng?.toString() || 'unknown',
-      accuracy: geo.accuracy?.toString() || 'unknown',
-    }
-  };
-
-  addLog('UPLOAD', `Queuing: ${file.name} (${formatBytes(file.size)})`);
-
-  if (!isFirebaseReady || !firebaseStorage) {
-    // Demo mode - simulate upload
-    addLog('UPLOAD', `[DEMO] Simulating upload for ${file.name}...`, 'warn');
-    await simulateUpload(file, metadata);
-    return;
-  }
-
-  try {
-    // Real Firebase upload
-    const { ref, uploadBytesResumable, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js');
-    const storageRef = ref(firebaseStorage, `aegisvault/${state.sessionId}/${timestamp}_${file.name}`);
-    const task = uploadBytesResumable(storageRef, file, metadata);
-
-    task.on('state_changed',
-      (snap) => {
-        const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-        updateLastLog(`Uploading ${file.name}: ${pct}%`);
-      },
-      (err) => addLog('ERROR', `Upload failed: ${err.message}`, 'err'),
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        state.syncCount++;
-        document.getElementById('sync-count').textContent = state.syncCount;
-        addLog('UPLOAD', `Secured: ${file.name} → Firebase`, 'ok');
-      }
-    );
-  } catch (err) {
-    addLog('ERROR', `Upload error: ${err.message}`, 'err');
-  }
-}
-
-async function simulateUpload(file, meta) {
-  await delay(800 + Math.random() * 600);
-  state.syncCount++;
-  document.getElementById('sync-count').textContent = state.syncCount;
-  addLog('UPLOAD', `[DEMO] ${file.name} secured with geo-tag`, 'ok');
-}
 
 // ────────────────────────────────────────────────────
 // FIREBASE INIT

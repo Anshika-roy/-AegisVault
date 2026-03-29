@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AegisVault - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-md px-4 py-10">
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-sky-900/20">
+      <h1 class="text-2xl font-semibold tracking-tight">AegisVault Login</h1>
+      <p class="mt-2 text-sm text-slate-400">Secure sign-in with role-based routing.</p>
+
+      <form id="login-form" class="mt-6 space-y-4">
+        <div>
+          <label class="mb-1 block text-sm text-slate-300" for="email">Email</label>
+          <input id="email" type="email" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-sky-500" />
+        </div>
+        <div>
+          <label class="mb-1 block text-sm text-slate-300" for="password">Password</label>
+          <input id="password" type="password" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-sky-500" />
+        </div>
+
+        <button type="submit" class="w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400">Login</button>
+      </form>
+
+      <div id="login-status" class="mt-4 rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-300">Awaiting login...</div>
+
+      <p class="mt-4 text-center text-sm text-slate-400">
+        New user?
+        <a href="register.html" class="text-sky-400 hover:text-sky-300">Create account</a>
+      </p>
+    </div>
+  </main>
+
+  <script type="module" src="./login.js"></script>
+</body>
+</html>
