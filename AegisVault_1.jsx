@@ -120,6 +120,75 @@ function downloadEvidenceCertificate(caseRecord) {
   docPdf.save(`evidence_certificate_${caseRecord.id}.pdf`);
 }
 
+function downloadVaultReport(cases, userName) {
+  const docPdf = new jsPDF({ unit: "pt", format: "a4" });
+  const left = 40;
+  let y = 50;
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(18);
+  docPdf.text("AegisVault Evidence Report", left, y);
+
+  y += 22;
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(10);
+  docPdf.text(`Generated: ${new Date().toISOString()}`, left, y);
+  y += 14;
+  docPdf.text(`User: ${userName || "Unknown"}`, left, y);
+  y += 14;
+  docPdf.text(`Cases: ${cases.length}`, left, y);
+
+  if (!cases.length) {
+    y += 24;
+    docPdf.text("No case data available.", left, y);
+    docPdf.save("aegisvault_evidence_report.pdf");
+    return;
+  }
+
+  cases.forEach((caseRecord, caseIdx) => {
+    if (y > 700) {
+      docPdf.addPage();
+      y = 50;
+    }
+
+    y += 18;
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text(`${caseIdx + 1}. ${caseRecord.title || "Untitled Case"}`, left, y);
+    y += 12;
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text(`Case ID: ${caseRecord.id}`, left, y);
+    y += 12;
+    docPdf.text(`Filed: ${caseRecord.filed || "-"}  Status: ${caseRecord.status || "-"}`, left, y);
+
+    const evidence = Array.isArray(caseRecord.evidence) ? caseRecord.evidence : [];
+    if (!evidence.length) {
+      y += 12;
+      docPdf.text("No evidence attached.", left + 10, y);
+      return;
+    }
+
+    evidence.forEach((item, idx) => {
+      if (y > 730) {
+        docPdf.addPage();
+        y = 50;
+      }
+
+      y += 12;
+      docPdf.setFont("helvetica", "bold");
+      docPdf.text(`- [${idx + 1}] ${item.name || "Unnamed file"}`, left + 10, y);
+      y += 11;
+      docPdf.setFont("helvetica", "normal");
+      docPdf.text(`Time: ${item.timestamp || "-"}`, left + 16, y);
+      y += 11;
+      docPdf.text(`GPS: ${item.gps || "-"}`, left + 16, y);
+      y += 11;
+      docPdf.text(`SHA-256: ${item.hash || "-"}`, left + 16, y);
+    });
+  });
+
+  docPdf.save("aegisvault_evidence_report.pdf");
+}
+
 async function getCurrentGpsString() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
@@ -241,9 +310,11 @@ function SettingsPanel({
 
   const submitContact = async (event) => {
     event.preventDefault();
-    await onAddContact({ name: name.trim(), phone: phone.trim() });
-    setName("");
-    setPhone("");
+    const added = await onAddContact({ name: name.trim(), phone: phone.trim() });
+    if (added) {
+      setName("");
+      setPhone("");
+    }
   };
 
   return (
@@ -1075,7 +1146,7 @@ function ClientDashboard({ onNavigate, cases, loadingCases }) {
 }
 
 // ─── CLIENT CASES ─────────────────────────────────────────────────────────────
-function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, onUploadEvidence, uploadingCaseId }) {
+function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, onUploadEvidence, uploadingCaseId, onVerifyEvidence, integrityStatusByEvidence }) {
   const [newTitle, setNewTitle] = useState("");
   const [newPriority, setNewPriority] = useState("medium");
 
@@ -1155,6 +1226,14 @@ function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, on
                     Open File
                   </a>
                 )}
+                <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => onVerifyEvidence && onVerifyEvidence(e)}>
+                  <Icon name="hash" size={12} /> Verify Integrity
+                </button>
+                {integrityStatusByEvidence?.[e.id] && (
+                  <div style={{ fontSize: 10, color: integrityStatusByEvidence[e.id].startsWith("Integrity verified") ? "var(--emerald)" : "#fca5a5", marginTop: 6 }}>
+                    {integrityStatusByEvidence[e.id]}
+                  </div>
+                )}
               </div>
             ))}
             <div className="evidence-card" style={{ border: "2px dashed var(--border)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 140, gap: 8 }} onClick={() => document.getElementById(`file-upload-${c.id}`)?.click()}>
@@ -1183,7 +1262,7 @@ function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, on
 }
 
 // ─── LAWYER DASHBOARD ─────────────────────────────────────────────────────────
-function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadingCaseId }) {
+function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadingCaseId, onVerifyEvidence, integrityStatusByEvidence }) {
   const [selectedCase, setSelectedCase] = useState(cases[0] || null);
   const [tab, setTab] = useState("timeline");
   const [updateText, setUpdateText] = useState("");
@@ -1353,6 +1432,14 @@ function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadin
                       Open File
                     </a>
                   )}
+                  <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => onVerifyEvidence && onVerifyEvidence(e)}>
+                    <Icon name="hash" size={12} /> Verify Integrity
+                  </button>
+                  {integrityStatusByEvidence?.[e.id] && (
+                    <div style={{ fontSize: 10, color: integrityStatusByEvidence[e.id].startsWith("Integrity verified") ? "var(--emerald)" : "#fca5a5", marginTop: 6 }}>
+                      {integrityStatusByEvidence[e.id]}
+                    </div>
+                  )}
                 </div>
               ))}
               <div className="evidence-card" style={{ border: "2px dashed var(--border)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 140, gap: 8 }} onClick={() => document.getElementById(`lawyer-upload-${selectedCase.id}`)?.click()}>
@@ -1504,6 +1591,7 @@ export default function App() {
   const [casesError, setCasesError] = useState("");
   const [creatingCase, setCreatingCase] = useState(false);
   const [uploadingCaseId, setUploadingCaseId] = useState("");
+  const [integrityStatusByEvidence, setIntegrityStatusByEvidence] = useState({});
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [alertStatus, setAlertStatus] = useState("");
 
@@ -1605,17 +1693,37 @@ export default function App() {
     }
 
     const storageKey = `aegisvault.trustedContacts.${user.uid}`;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setTrustedContacts(parsed);
+
+    const loadTrustedContacts = async () => {
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        const cloudContacts = snap.exists() ? snap.data()?.trustedContacts : null;
+        if (Array.isArray(cloudContacts)) {
+          setTrustedContacts(cloudContacts);
+          localStorage.setItem(storageKey, JSON.stringify(cloudContacts));
+          return;
         }
+      } catch {
+        // Fall back to local cache when Firestore is unavailable.
       }
-    } catch {
+
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setTrustedContacts(parsed);
+            return;
+          }
+        }
+      } catch {
+        // Ignore malformed local cache.
+      }
+
       setTrustedContacts([]);
-    }
+    };
+
+    loadTrustedContacts();
   }, [user?.uid, user?.role]);
 
   const persistTrustedContacts = useCallback(async (nextContacts) => {
@@ -1628,21 +1736,29 @@ export default function App() {
   const addTrustedContact = useCallback(async ({ name, phone }) => {
     if (!name || !phone) {
       setAlertStatus("Please enter both name and phone.");
-      return;
+      return false;
     }
     if (!isLikelyPhone(phone)) {
       setAlertStatus("Phone format looks invalid. Use digits with optional leading +.");
-      return;
+      return false;
     }
 
     const normalizedPhone = normalizePhoneInput(phone);
+    const duplicate = trustedContacts.some((c) => normalizePhoneInput(c.phone) === normalizedPhone);
+    if (duplicate) {
+      setAlertStatus("This contact number is already in your trusted contacts.");
+      return false;
+    }
+
     const nextContacts = [...trustedContacts, { id: `${Date.now()}`, name, phone: normalizedPhone }];
     setTrustedContacts(nextContacts);
     setAlertStatus("Trusted contact added.");
     try {
       await persistTrustedContacts(nextContacts);
+      return true;
     } catch (error) {
       setAlertStatus(error?.message || "Saved locally, but cloud sync failed.");
+      return true;
     }
   }, [persistTrustedContacts, trustedContacts]);
 
@@ -1715,12 +1831,19 @@ export default function App() {
 
   const uploadEvidence = useCallback(async (caseId, file) => {
     if (!caseId || !file) return;
+    if (!user?.uid) {
+      setCasesError("You must be logged in to upload evidence.");
+      return;
+    }
+
     setUploadingCaseId(caseId);
     try {
       const hash = await sha256Hex(file);
       const gps = await getCurrentGpsString();
       const timestamp = new Date().toISOString();
       const safeName = file.name.replace(/\s+/g, "-");
+      const basePath = `${user.uid}/${caseId}`;
+
       if (!isSupabaseConfigured) {
         const fallbackEvidenceItem = {
           id: `e-${Date.now()}`,
@@ -1751,7 +1874,7 @@ export default function App() {
         return;
       }
 
-      const objectPath = `cases/${caseId}/evidence/${Date.now()}_${safeName}`;
+      const objectPath = `${basePath}/file/${Date.now()}_${safeName}`;
       const { error: fileUploadError } = await supabase.storage
         .from(supabaseBucket)
         .upload(objectPath, file, {
@@ -1763,10 +1886,18 @@ export default function App() {
         throw new Error(fileUploadError.message || "Supabase file upload failed.");
       }
 
-      const { data: urlData } = supabase.storage.from(supabaseBucket).getPublicUrl(objectPath);
-      const downloadURL = urlData?.publicUrl || "";
+      const { data: signedData, error: signedUrlError } = await supabase.storage
+        .from(supabaseBucket)
+        .createSignedUrl(objectPath, 3600);
+
+      if (signedUrlError) {
+        throw new Error(signedUrlError.message || "Could not generate a signed URL.");
+      }
+
+      const downloadURL = signedData?.signedUrl || "";
 
       const metadataPayload = {
+        userId: user.uid,
         caseId,
         fileName: file.name,
         filePath: objectPath,
@@ -1776,7 +1907,7 @@ export default function App() {
         hash,
       };
 
-      const metadataPath = `cases/${caseId}/metadata/${Date.now()}_${safeName}.json`;
+      const metadataPath = `${basePath}/metadata/${Date.now()}_${safeName}.json`;
       const metadataBlob = new Blob([JSON.stringify(metadataPayload, null, 2)], { type: "application/json" });
 
       const { error: metadataUploadError } = await supabase.storage
@@ -1800,6 +1931,7 @@ export default function App() {
         timestamp,
         size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         downloadURL,
+        filePath: objectPath,
         metadataPath,
         storageProvider: "supabase",
       };
@@ -1820,11 +1952,50 @@ export default function App() {
     } finally {
       setUploadingCaseId("");
     }
+  }, [user?.uid]);
+
+  const verifyEvidenceIntegrity = useCallback((evidenceItem) => {
+    if (!evidenceItem?.id) return;
+    if (!evidenceItem?.hash || evidenceItem.hash === "hash-unavailable") {
+      setIntegrityStatusByEvidence((prev) => ({
+        ...prev,
+        [evidenceItem.id]: "Stored hash is unavailable for verification.",
+      }));
+      return;
+    }
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "*/*";
+
+    fileInput.onchange = async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      setIntegrityStatusByEvidence((prev) => ({
+        ...prev,
+        [evidenceItem.id]: "Verifying integrity...",
+      }));
+
+      const computedHash = await sha256Hex(file);
+      const expectedHash = String(evidenceItem.hash || "").toLowerCase();
+      const isMatch = computedHash && computedHash === expectedHash;
+
+      setIntegrityStatusByEvidence((prev) => ({
+        ...prev,
+        [evidenceItem.id]: isMatch
+          ? "Integrity verified: SHA-256 hash matches."
+          : "Integrity mismatch: file hash does not match stored evidence hash.",
+      }));
+    };
+
+    fileInput.click();
   }, []);
 
   useEffect(() => {
     if (!user?.uid) {
       setCases([]);
+      setIntegrityStatusByEvidence({});
       return;
     }
 
@@ -1887,10 +2058,10 @@ export default function App() {
   const renderPage = () => {
     if (page === "dashboard") return isClient
       ? <ClientDashboard onNavigate={navigate} cases={cases} loadingCases={loadingCases} />
-      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} />;
+      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} />;
     if (page === "cases") return isClient
-      ? <ClientCases cases={cases} loadingCases={loadingCases} user={user} onCreateCase={createCase} creatingCase={creatingCase} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} />
-      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} />;
+      ? <ClientCases cases={cases} loadingCases={loadingCases} user={user} onCreateCase={createCase} creatingCase={creatingCase} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} />
+      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} />;
     if (page === "settings" && isClient) {
       return (
         <SettingsPanel
@@ -1930,9 +2101,14 @@ export default function App() {
                 {casesError && <div style={{ marginTop: 8, fontSize: 12, color: "#fca5a5" }}>{casesError}</div>}
               </div>
               {isClient && page === "dashboard" && (
-                <button onClick={() => setShowEmergency(true)} style={{ padding: "8px 16px", background: "var(--red-dim)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "var(--radius-sm)", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 8 }}>●</span> Emergency
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button className="btn btn-ghost" onClick={() => downloadVaultReport(cases, user?.name)}>
+                    <Icon name="file" size={13} /> Download Vault PDF
+                  </button>
+                  <button onClick={() => setShowEmergency(true)} style={{ padding: "8px 16px", background: "var(--red-dim)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "var(--radius-sm)", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 8 }}>●</span> Emergency
+                  </button>
+                </div>
               )}
               {!isClient && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
