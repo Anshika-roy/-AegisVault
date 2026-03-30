@@ -1,53 +1,149 @@
 import React, { useState, useEffect, useRef, useCallback } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const MOCK_USERS = {
-  client: { uid: "c1", name: "Sarah Chen", email: "sarah@example.com", role: "client", avatar: "SC" },
-  lawyer: { uid: "l1", name: "Marcus Webb", email: "marcus@example.com", role: "lawyer", avatar: "MW", bar: "CA Bar #78234" },
-};
-
-const MOCK_CASES = [
-  {
-    id: "case-001", title: "Chen v. Respondent", status: "hearing", stage: 3,
-    client: "Sarah Chen", lawyer: "Marcus Webb", filed: "2025-11-14",
-    nextHearing: "2026-04-12", priority: "high",
-    timeline: [
-      { id: "t1", time: "2025-11-14T09:00:00", label: "Case Filed", detail: "Initial protective order submitted to Superior Court.", type: "milestone" },
-      { id: "t2", time: "2025-11-14T09:17:00", label: "Emergency Evidence Secured", detail: "3 audio recordings + 7 photos uploaded and cryptographically verified.", type: "evidence" },
-      { id: "t3", time: "2025-11-20T14:30:00", label: "Legal Review Initiated", detail: "Attorney Marcus Webb assigned and case materials reviewed.", type: "update" },
-      { id: "t4", time: "2025-12-02T10:00:00", label: "Hearing Scheduled", detail: "Superior Court confirmed April 12, 2026 at 9:00 AM, Room 14B.", type: "milestone" },
-      { id: "t5", time: "2026-01-08T11:15:00", label: "New Evidence Added", detail: "Client uploaded 2 additional incident photos from Dec 29.", type: "evidence" },
-      { id: "t6", time: "2026-02-14T16:00:00", label: "Attorney Update", detail: "Motion to compel filed. Awaiting response from opposing counsel.", type: "legal" },
-    ],
-    updates: [
-      { id: "u1", author: "Marcus Webb", role: "lawyer", time: "2025-11-20T14:30:00", text: "I've reviewed the initial evidence. The audio recordings are strong. We'll focus the hearing on establishing the pattern of behavior." },
-      { id: "u2", author: "Marcus Webb", role: "lawyer", time: "2026-02-14T16:05:00", text: "Motion to compel has been filed. This will require the other side to produce communications. Expect a response within 21 days." },
-    ],
-    evidence: [
-      { id: "e1", name: "audio_nov14_0847.webm", type: "audio", hash: "a3f8c...d92e", verified: true, gps: "37.7749,-122.4194", timestamp: "2025-11-14T08:47:00", size: "4.2 MB" },
-      { id: "e2", name: "photo_evidence_01.jpg", type: "image", hash: "b7d1a...c34f", verified: true, gps: "37.7749,-122.4194", timestamp: "2025-11-14T09:02:00", size: "2.8 MB" },
-      { id: "e3", name: "photo_evidence_02.jpg", type: "image", hash: "c9e2b...f56a", verified: true, gps: "37.7749,-122.4194", timestamp: "2025-11-14T09:03:00", size: "3.1 MB" },
-      { id: "e4", name: "incident_dec29.jpg", type: "image", hash: "d4f3c...a78b", verified: true, gps: "37.7750,-122.4195", timestamp: "2026-01-08T11:10:00", size: "1.9 MB" },
-    ],
-  },
-  {
-    id: "case-002", title: "Johnson v. Respondent", status: "review", stage: 2,
-    client: "Amara Johnson", lawyer: "Marcus Webb", filed: "2026-01-22",
-    nextHearing: "TBD", priority: "medium",
-    timeline: [
-      { id: "t1", time: "2026-01-22T13:00:00", label: "Case Filed", detail: "Emergency petition submitted.", type: "milestone" },
-      { id: "t2", time: "2026-01-22T13:45:00", label: "Emergency Evidence Secured", detail: "2 video recordings uploaded and verified.", type: "evidence" },
-    ],
-    updates: [],
-    evidence: [
-      { id: "e1", name: "video_jan22.webm", type: "video", hash: "e5g4d...b89c", verified: true, gps: "34.0522,-118.2437", timestamp: "2026-01-22T13:40:00", size: "18.4 MB" },
-    ],
-  },
-];
+import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { addDoc, arrayUnion, collection, doc, getDoc, getDocFromCache, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { auth, db, isFirestoreOfflineError } from "./firebase-config.js";
+import { isSupabaseConfigured, supabase, supabaseBucket } from "./supabase-config.js";
 
 const STAGES = ["Filed", "Under Review", "Hearing Scheduled", "Hearing", "Closed"];
 const STATUS_COLORS = { hearing: "indigo", review: "amber", pending: "slate", closed: "emerald" };
+
+function mapEvidenceItem(item, idFallback) {
+  return {
+    id: item?.id || idFallback,
+    name: item?.name || item?.fileName || "Untitled evidence",
+    type: item?.type || item?.fileType || "file",
+    hash: item?.hash || item?.fileHash || "-",
+    verified: item?.verified !== false,
+    gps: item?.gps || ((item?.latitude != null && item?.longitude != null) ? `${item.latitude},${item.longitude}` : "-") ,
+    downloadURL: item?.downloadURL || "",
+    timestamp: item?.timestamp || item?.createdAt || new Date().toISOString(),
+    size: item?.size || "-",
+  };
+}
+
+function mapTimelineItem(item, idFallback) {
+  return {
+    id: item?.id || idFallback,
+    time: item?.time || item?.timestamp || new Date().toISOString(),
+    label: item?.label || item?.title || "Case update",
+    detail: item?.detail || item?.text || "",
+    type: item?.type || "update",
+  };
+}
+
+function mapUpdateItem(item, idFallback) {
+  return {
+    id: item?.id || idFallback,
+    author: item?.author || item?.authorName || "System",
+    role: item?.role || "lawyer",
+    time: item?.time || item?.timestamp || new Date().toISOString(),
+    text: item?.text || "",
+  };
+}
+
+function mapCaseDoc(id, data) {
+  const timeline = Array.isArray(data?.timeline) ? data.timeline.map((t, i) => mapTimelineItem(t, `${id}-t-${i}`)) : [];
+  const updates = Array.isArray(data?.updates) ? data.updates.map((u, i) => mapUpdateItem(u, `${id}-u-${i}`)) : [];
+  const evidence = Array.isArray(data?.evidence) ? data.evidence.map((e, i) => mapEvidenceItem(e, `${id}-e-${i}`)) : [];
+
+  return {
+    id,
+    title: data?.title || data?.caseName || "Untitled Case",
+    status: data?.status || "pending",
+    stage: Number.isFinite(data?.stage) ? data.stage : 0,
+    client: data?.client || data?.clientName || data?.clientEmail || "-",
+    lawyer: data?.lawyer || data?.lawyerName || data?.lawyerEmail || "-",
+    clientUid: data?.clientUid || "",
+    lawyerUid: data?.lawyerUid || "",
+    filed: data?.filed || data?.createdAt || "-",
+    nextHearing: data?.nextHearing || "TBD",
+    priority: data?.priority || "medium",
+    timeline,
+    updates,
+    evidence,
+  };
+}
+
+function downloadEvidenceCertificate(caseRecord) {
+  const docPdf = new jsPDF({ unit: "pt", format: "a4" });
+  const left = 40;
+  let y = 50;
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(18);
+  docPdf.text("Evidence Certificate", left, y);
+
+  y += 24;
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(10);
+  docPdf.text(`Generated: ${new Date().toISOString()}`, left, y);
+  y += 14;
+  docPdf.text(`Case ID: ${caseRecord.id}`, left, y);
+  y += 14;
+  docPdf.text(`Case Title: ${caseRecord.title || "Untitled Case"}`, left, y);
+  y += 14;
+  docPdf.text(`Client: ${caseRecord.client || "-"}`, left, y);
+  y += 14;
+  docPdf.text(`Lawyer: ${caseRecord.lawyer || "-"}`, left, y);
+
+  y += 22;
+  docPdf.setFont("helvetica", "bold");
+  docPdf.text("Evidence Metadata", left, y);
+  y += 14;
+
+  const evidence = Array.isArray(caseRecord.evidence) ? caseRecord.evidence : [];
+  if (!evidence.length) {
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text("No evidence records found.", left, y);
+  } else {
+    evidence.forEach((item, idx) => {
+      if (y > 740) {
+        docPdf.addPage();
+        y = 50;
+      }
+
+      docPdf.setFont("helvetica", "bold");
+      docPdf.text(`${idx + 1}. ${item.name || "Unnamed file"}`, left, y);
+      y += 12;
+      docPdf.setFont("helvetica", "normal");
+      docPdf.text(`GPS Coordinates: ${item.gps || "-"}`, left, y);
+      y += 12;
+      docPdf.text(`Digital Hash: ${item.hash || "-"}`, left, y);
+      y += 12;
+      docPdf.text(`Timestamp: ${item.timestamp || "-"}`, left, y);
+      y += 16;
+    });
+  }
+
+  docPdf.save(`evidence_certificate_${caseRecord.id}.pdf`);
+}
+
+async function getCurrentGpsString() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve("GPS unavailable");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve(`${pos.coords.latitude.toFixed(4)},${pos.coords.longitude.toFixed(4)}`),
+      () => resolve("GPS unavailable"),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
+async function sha256Hex(file) {
+  try {
+    const buffer = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buffer);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return "hash-unavailable";
+  }
+}
 
 // ─── ICONS ────────────────────────────────────────────────────────────────────
 const Icon = ({ name, size = 20, className = "", ...props }) => {
@@ -91,6 +187,100 @@ function formatRelative(iso) {
   if (days === 1) return "Yesterday";
   if (days < 30) return `${days}d ago`;
   return formatTime(iso).split(",")[0];
+}
+
+function toInitials(nameOrEmail) {
+  const source = (nameOrEmail || "").trim();
+  if (!source) return "AV";
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
+}
+
+function normalizeRole(role) {
+  return role === "victim" ? "client" : (role || "client");
+}
+
+function buildPortalUser(uid, profile, fallbackEmail) {
+  const role = normalizeRole(profile?.role);
+  const name = (profile?.name || fallbackEmail || "User").trim();
+  return {
+    uid,
+    name,
+    email: profile?.email || fallbackEmail || "",
+    role,
+    avatar: toInitials(name),
+    bar: role === "lawyer" ? (profile?.bar || "Attorney") : undefined,
+  };
+}
+
+function normalizePhoneInput(value) {
+  return String(value || "").replace(/\s+/g, "").trim();
+}
+
+function isLikelyPhone(value) {
+  const normalized = normalizePhoneInput(value);
+  return /^\+?[0-9]{8,15}$/.test(normalized);
+}
+
+function buildDistressMessage(userName, timestamp, gps) {
+  return `AegisVault DISTRESS ALERT: ${userName || "Victim"} opened the vault in distress at ${timestamp}. Last known GPS: ${gps || "unavailable"}.`;
+}
+
+function SettingsPanel({
+  trustedContacts,
+  onAddContact,
+  onRemoveContact,
+  onSendTestAlert,
+  alertStatus,
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const submitContact = async (event) => {
+    event.preventDefault();
+    await onAddContact({ name: name.trim(), phone: phone.trim() });
+    setName("");
+    setPhone("");
+  };
+
+  return (
+    <div className="fade-in stack">
+      <div className="card">
+        <div className="section-heading">Trusted Contacts</div>
+        <form onSubmit={submitContact} className="stack-sm" style={{ marginBottom: 12 }}>
+          <input className="input" placeholder="Contact name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input" placeholder="Phone number (e.g. +15551234567)" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn btn-primary" type="submit">Add Contact</button>
+            <button className="btn btn-ghost" type="button" onClick={onSendTestAlert}>Send Test Alert</button>
+          </div>
+        </form>
+
+        {!trustedContacts.length && (
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No trusted contacts yet.</div>
+        )}
+
+        <div className="stack-sm">
+          {trustedContacts.map((contact) => (
+            <div key={contact.id} className="update-item" style={{ alignItems: "center" }}>
+              <div className="update-body">
+                <div className="update-author">{contact.name || "Trusted Contact"}</div>
+                <div className="update-time">{contact.phone}</div>
+              </div>
+              <button className="btn btn-ghost" onClick={() => onRemoveContact(contact.id)}>Remove</button>
+            </div>
+          ))}
+        </div>
+
+        {alertStatus && (
+          <div style={{ marginTop: 12, fontSize: 12, color: "#fca5a5" }}>{alertStatus}</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -630,8 +820,23 @@ const styles = `
 `;
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, errorMessage }) {
   const [role, setRole] = useState("client");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    try {
+      await onLogin({ email: email.trim(), password, roleHint: role });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-screen">
       <div className="login-card fade-in">
@@ -651,14 +856,19 @@ function LoginScreen({ onLogin }) {
             Attorney
           </button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <input className="input" type="email" placeholder="Email address" defaultValue={role === "client" ? "sarah@example.com" : "marcus@example.com"} readOnly />
-          <input className="input" type="password" placeholder="Password" defaultValue="••••••••" readOnly />
-        </div>
-        <button className="login-btn" onClick={() => onLogin(MOCK_USERS[role])}>
-          Sign In as {role === "client" ? "Client" : "Attorney"}
-        </button>
-        <div className="login-hint">Demo mode — click to enter as {role}.</div>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <input className="input" type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button className="login-btn" type="submit" disabled={loading} style={{ opacity: loading ? 0.7 : 1, cursor: loading ? "wait" : "pointer" }}>
+            {loading ? "Signing In..." : `Sign In as ${role === "client" ? "Client" : "Attorney"}`}
+          </button>
+        </form>
+        <div className="login-hint">Use your registered Firebase credentials.</div>
+        {errorMessage && (
+          <div style={{ marginTop: 12, padding: 10, borderRadius: "var(--radius-sm)", border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontSize: 12 }}>
+            {errorMessage}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -670,18 +880,27 @@ function EmergencyMode({ onClose }) {
   const [mode, setMode] = useState("audio"); // audio | video
   const [seconds, setSeconds] = useState(0);
   const [gps, setGps] = useState("Acquiring GPS...");
+  const [capturedAt, setCapturedAt] = useState("");
   const [saved, setSaved] = useState(false);
   const timerRef = useRef(null);
 
-  useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
+  useEffect(() => () => clearInterval(timerRef.current), []);
+
+  const captureGeoAndTime = () => {
+    setCapturedAt(new Date().toISOString());
+    if (!navigator.geolocation) {
+      setGps("GPS unavailable");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
       (pos) => setGps(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`),
-      () => setGps("GPS unavailable")
+      () => setGps("GPS unavailable"),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-    return () => clearInterval(timerRef.current);
-  }, []);
+  };
 
   const toggleRecording = () => {
+    captureGeoAndTime();
     if (recording) {
       clearInterval(timerRef.current);
       setRecording(false);
@@ -710,6 +929,7 @@ function EmergencyMode({ onClose }) {
           {saved ? "Evidence Secured & Uploaded" : recording ? "Recording in Progress" : "Ready to Record"}
         </div>
         <div className="em-gps"><Icon name="map" size={12} />{gps}</div>
+        <div className="em-gps" style={{ marginTop: 6 }}><Icon name="clock" size={12} />{capturedAt ? formatTime(capturedAt) : "Timestamp pending"}</div>
       </div>
 
       {recording && <div className="em-timer">{fmt(seconds)}</div>}
@@ -755,30 +975,47 @@ function EmergencyMode({ onClose }) {
 }
 
 // ─── CLIENT DASHBOARD ─────────────────────────────────────────────────────────
-function ClientDashboard({ user, onNavigate }) {
-  const myCase = MOCK_CASES[0];
+function ClientDashboard({ onNavigate, cases, loadingCases }) {
+  const myCase = cases[0] || null;
+  const evidenceCount = myCase?.evidence?.length || 0;
+  const lastUpdate = myCase?.updates?.[myCase.updates.length - 1];
+
+  if (loadingCases) {
+    return <div className="fade-in" style={{ color: "var(--text-muted)" }}>Loading your cases...</div>;
+  }
+
+  if (!myCase) {
+    return (
+      <div className="fade-in">
+        <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
+          No case found yet. Your assigned cases will appear here.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in">
       <div className="stats-row">
         <div className="stat-card">
           <div className="stat-label">Active Cases</div>
-          <div className="stat-value">1</div>
-          <div className="stat-sub">Hearing: Apr 12</div>
+          <div className="stat-value">{cases.length}</div>
+          <div className="stat-sub">{myCase.nextHearing !== "TBD" ? `Hearing: ${myCase.nextHearing}` : "No hearing date"}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Evidence Items</div>
-          <div className="stat-value">4</div>
-          <div className="stat-sub">All verified</div>
+          <div className="stat-value">{evidenceCount}</div>
+          <div className="stat-sub">{evidenceCount ? "Synced from Firestore" : "No evidence yet"}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Legal Access</div>
           <div className="stat-value" style={{ fontSize: 18, color: "var(--emerald)" }}>Granted</div>
-          <div className="stat-sub">Marcus Webb</div>
+          <div className="stat-sub">{myCase.lawyer || "Not assigned"}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Last Update</div>
-          <div className="stat-value" style={{ fontSize: 18 }}>Feb 14</div>
-          <div className="stat-sub">Attorney posted</div>
+          <div className="stat-value" style={{ fontSize: 18 }}>{lastUpdate ? formatRelative(lastUpdate.time) : "-"}</div>
+          <div className="stat-sub">{lastUpdate ? "Attorney posted" : "No updates"}</div>
         </div>
       </div>
 
@@ -818,7 +1055,7 @@ function ClientDashboard({ user, onNavigate }) {
 
       <div className="section-heading">Recent Updates from Attorney</div>
       <div className="stack">
-        {myCase.updates.map(u => (
+        {(myCase.updates || []).map(u => (
           <div key={u.id} className="update-item">
             <div className={`avatar avatar-lawyer`} style={{ width: 36, height: 36, fontSize: 12, flexShrink: 0 }}>MW</div>
             <div className="update-body">
@@ -838,10 +1075,48 @@ function ClientDashboard({ user, onNavigate }) {
 }
 
 // ─── CLIENT CASES ─────────────────────────────────────────────────────────────
-function ClientCases({ onNavigate }) {
+function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, onUploadEvidence, uploadingCaseId }) {
+  const [newTitle, setNewTitle] = useState("");
+  const [newPriority, setNewPriority] = useState("medium");
+
+  const submitCreateCase = async (event) => {
+    event.preventDefault();
+    if (!newTitle.trim() || !onCreateCase) return;
+    await onCreateCase({ title: newTitle.trim(), priority: newPriority });
+    setNewTitle("");
+    setNewPriority("medium");
+  };
+
+  if (loadingCases) {
+    return <div className="fade-in" style={{ color: "var(--text-muted)" }}>Loading case details...</div>;
+  }
+
   return (
     <div className="fade-in">
-      {MOCK_CASES.slice(0, 1).map(c => (
+      {user?.role === "client" && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="section-heading">Create New Case</div>
+          <form onSubmit={submitCreateCase} className="stack-sm">
+            <input className="input" placeholder="Case title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <select className="input" value={newPriority} onChange={(e) => setNewPriority(e.target.value)}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              <button className="btn btn-primary" type="submit" disabled={creatingCase}>{creatingCase ? "Creating..." : "Create Case"}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {!cases.length && (
+        <div className="card" style={{ textAlign: "center", color: "var(--text-muted)", marginBottom: 16 }}>
+          No cases found for this account yet.
+        </div>
+      )}
+
+      {cases.map(c => (
         <div key={c.id} className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div className={`case-priority priority-${c.priority}`} />
@@ -850,6 +1125,11 @@ function ClientCases({ onNavigate }) {
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Filed {c.filed}</div>
             </div>
             <span className={`badge badge-${STATUS_COLORS[c.status]}`}>{c.status}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+            <button className="btn btn-ghost" onClick={() => downloadEvidenceCertificate(c)}>
+              <Icon name="file" size={13} /> Download Evidence Certificate
+            </button>
           </div>
           <div className="stepper" style={{ marginBottom: 20 }}>
             {STAGES.map((s, i) => {
@@ -870,11 +1150,30 @@ function ClientCases({ onNavigate }) {
                 <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4, display: "flex", gap: 6 }}>
                   <Icon name="map" size={10} />{e.gps}
                 </div>
+                {e.downloadURL && (
+                  <a href={e.downloadURL} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "var(--indigo-light)", marginTop: 6, display: "inline-block" }}>
+                    Open File
+                  </a>
+                )}
               </div>
             ))}
-            <div className="evidence-card" style={{ border: "2px dashed var(--border)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 140, gap: 8 }} onClick={() => {}}>
+            <div className="evidence-card" style={{ border: "2px dashed var(--border)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 140, gap: 8 }} onClick={() => document.getElementById(`file-upload-${c.id}`)?.click()}>
+              <input id={`file-upload-${c.id}`} type="file" accept="image/*,.pdf,application/pdf" multiple style={{ display: "none" }} onChange={(e) => {
+                const selectedFiles = Array.from(e.target.files || []);
+                if (selectedFiles.length && onUploadEvidence) {
+                  selectedFiles.reduce(
+                    (p, file) => p.then(() => onUploadEvidence(c.id, file)),
+                    Promise.resolve()
+                  );
+                }
+                e.target.value = "";
+              }} />
               <Icon name="upload" size={24} style={{ color: "var(--text-dim)" }} />
-              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Upload Evidence</div>
+              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                {uploadingCaseId === c.id
+                  ? "Uploading..."
+                  : (isSupabaseConfigured ? "Upload Screenshots / PDFs" : "Log Evidence Metadata (Supabase not configured)")}
+              </div>
             </div>
           </div>
         </div>
@@ -884,40 +1183,88 @@ function ClientCases({ onNavigate }) {
 }
 
 // ─── LAWYER DASHBOARD ─────────────────────────────────────────────────────────
-function LawyerDashboard({ user }) {
-  const [selectedCase, setSelectedCase] = useState(MOCK_CASES[0]);
+function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadingCaseId }) {
+  const [selectedCase, setSelectedCase] = useState(cases[0] || null);
   const [tab, setTab] = useState("timeline");
   const [updateText, setUpdateText] = useState("");
-  const [updates, setUpdates] = useState(selectedCase.updates);
+  const [updates, setUpdates] = useState([]);
 
-  const handleCaseSelect = (c) => { setSelectedCase(c); setUpdates(c.updates); setTab("timeline"); };
+  useEffect(() => {
+    if (!cases.length) {
+      setSelectedCase(null);
+      setUpdates([]);
+      return;
+    }
 
-  const postUpdate = () => {
+    setSelectedCase((prev) => {
+      if (prev) {
+        const stillExists = cases.find((c) => c.id === prev.id);
+        if (stillExists) return stillExists;
+      }
+      return cases[0];
+    });
+  }, [cases]);
+
+  useEffect(() => {
+    setUpdates(selectedCase?.updates || []);
+  }, [selectedCase]);
+
+  const handleCaseSelect = (c) => { setSelectedCase(c); setUpdates(c.updates || []); setTab("timeline"); };
+
+  const postUpdate = async () => {
     if (!updateText.trim()) return;
     const newUpdate = { id: Date.now().toString(), author: user.name, role: "lawyer", time: new Date().toISOString(), text: updateText.trim() };
     setUpdates(prev => [...prev, newUpdate]);
     setUpdateText("");
+
+    if (!selectedCase?.id) return;
+
+    try {
+      await addDoc(collection(db, "cases", selectedCase.id, "updates"), {
+        author: user.name,
+        role: "lawyer",
+        text: newUpdate.text,
+        time: newUpdate.time,
+        timestamp: serverTimestamp(),
+      });
+    } catch (error) {
+      console.warn("Failed to persist case update:", error?.message || error);
+    }
   };
+
+  if (loadingCases) {
+    return <div className="fade-in" style={{ color: "var(--text-muted)" }}>Loading assigned cases...</div>;
+  }
+
+  if (!cases.length || !selectedCase) {
+    return (
+      <div className="fade-in">
+        <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
+          No cases assigned yet.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="two-pane fade-in" style={{ flex: 1 }}>
       {/* Left Pane: Case List */}
       <div className="pane-left">
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Active Cases ({MOCK_CASES.length})</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Active Cases ({cases.length})</div>
           <div className="stats-row" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 0 }}>
             <div className="stat-card" style={{ padding: 14 }}>
               <div className="stat-label" style={{ fontSize: 9 }}>Total Cases</div>
-              <div className="stat-value" style={{ fontSize: 22 }}>2</div>
+              <div className="stat-value" style={{ fontSize: 22 }}>{cases.length}</div>
             </div>
             <div className="stat-card" style={{ padding: 14 }}>
               <div className="stat-label" style={{ fontSize: 9 }}>Hearings</div>
-              <div className="stat-value" style={{ fontSize: 22 }}>1</div>
+              <div className="stat-value" style={{ fontSize: 22 }}>{cases.filter((c) => c.nextHearing !== "TBD").length}</div>
             </div>
           </div>
         </div>
         <div className="divider" />
-        {MOCK_CASES.map(c => (
+        {cases.map(c => (
           <div key={c.id} className={`case-item ${selectedCase.id === c.id ? "active" : ""}`} onClick={() => handleCaseSelect(c)}>
             <div className={`case-priority priority-${c.priority}`} />
             <div className="case-info">
@@ -985,6 +1332,11 @@ function LawyerDashboard({ user }) {
 
         {tab === "evidence" && (
           <div className="slide-in">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+              <button className="btn btn-ghost" onClick={() => downloadEvidenceCertificate(selectedCase)}>
+                <Icon name="file" size={13} /> Download Evidence Certificate
+              </button>
+            </div>
             <div className="evidence-grid">
               {selectedCase.evidence.map(e => (
                 <div key={e.id} className="evidence-card">
@@ -996,8 +1348,31 @@ function LawyerDashboard({ user }) {
                   <div className="verified-badge"><Icon name="shield" size={10} /> Integrity Verified</div>
                   <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4, fontFamily: "var(--font-mono)" }}>{e.timestamp.split("T")[0]}</div>
                   <div style={{ fontSize: 10, color: "var(--text-dim)", display: "flex", gap: 4 }}><Icon name="map" size={9} />{e.gps}</div>
+                  {e.downloadURL && (
+                    <a href={e.downloadURL} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "var(--indigo-light)", marginTop: 6, display: "inline-block" }}>
+                      Open File
+                    </a>
+                  )}
                 </div>
               ))}
+              <div className="evidence-card" style={{ border: "2px dashed var(--border)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 140, gap: 8 }} onClick={() => document.getElementById(`lawyer-upload-${selectedCase.id}`)?.click()}>
+                <input id={`lawyer-upload-${selectedCase.id}`} type="file" accept="image/*,.pdf,application/pdf" multiple style={{ display: "none" }} onChange={(e) => {
+                  const selectedFiles = Array.from(e.target.files || []);
+                  if (selectedFiles.length && onUploadEvidence) {
+                    selectedFiles.reduce(
+                      (p, file) => p.then(() => onUploadEvidence(selectedCase.id, file)),
+                      Promise.resolve()
+                    );
+                  }
+                  e.target.value = "";
+                }} />
+                <Icon name="upload" size={24} style={{ color: "var(--text-dim)" }} />
+                <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                  {uploadingCaseId === selectedCase.id
+                    ? "Uploading..."
+                    : (isSupabaseConfigured ? "Upload Screenshots / PDFs" : "Log Evidence Metadata (Supabase not configured)")}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1122,13 +1497,377 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("dashboard");
   const [showEmergency, setShowEmergency] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
+  const [cases, setCases] = useState([]);
+  const [loadingCases, setLoadingCases] = useState(false);
+  const [casesError, setCasesError] = useState("");
+  const [creatingCase, setCreatingCase] = useState(false);
+  const [uploadingCaseId, setUploadingCaseId] = useState("");
+  const [trustedContacts, setTrustedContacts] = useState([]);
+  const [alertStatus, setAlertStatus] = useState("");
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      const userRef = doc(db, "users", firebaseUser.uid);
+      try {
+        let profileSnap;
+        try {
+          profileSnap = await getDoc(userRef);
+        } catch (error) {
+          if (!isFirestoreOfflineError(error)) {
+            throw error;
+          }
+          profileSnap = await getDocFromCache(userRef);
+        }
+
+        let profile;
+        if (!profileSnap.exists()) {
+          profile = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || "",
+            name: firebaseUser.displayName || "",
+            role: "client",
+            createdAt: serverTimestamp(),
+          };
+          await setDoc(userRef, profile, { merge: true });
+        } else {
+          profile = profileSnap.data();
+        }
+
+        setUser(buildPortalUser(firebaseUser.uid, profile, firebaseUser.email || ""));
+        setAuthError("");
+      } catch (error) {
+        setAuthError(error?.message || "Failed to load your profile.");
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+
+    return () => unsub();
+  }, []);
 
   const navigate = useCallback((to) => {
     if (to === "emergency") { setShowEmergency(true); return; }
     setPage(to);
   }, []);
 
-  if (!user) return <LoginScreen onLogin={(u) => { setUser(u); setPage("dashboard"); }} />;
+  const handleLogin = useCallback(async ({ email, password, roleHint }) => {
+    setAuthError("");
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+
+    const userRef = doc(db, "users", credential.user.uid);
+    let profileSnap;
+
+    try {
+      profileSnap = await getDoc(userRef);
+    } catch (error) {
+      if (!isFirestoreOfflineError(error)) {
+        throw error;
+      }
+      profileSnap = await getDocFromCache(userRef);
+    }
+
+    if (!profileSnap.exists()) {
+      await setDoc(userRef, {
+        uid: credential.user.uid,
+        email: credential.user.email || email,
+        name: credential.user.displayName || "",
+        role: normalizeRole(roleHint || "client"),
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+    }
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await signOut(auth);
+    setShowEmergency(false);
+    setPage("dashboard");
+    setCases([]);
+    setCasesError("");
+    setCreatingCase(false);
+    setUploadingCaseId("");
+    setTrustedContacts([]);
+    setAlertStatus("");
+  }, []);
+
+  useEffect(() => {
+    if (!user?.uid || user.role !== "client") {
+      setTrustedContacts([]);
+      return;
+    }
+
+    const storageKey = `aegisvault.trustedContacts.${user.uid}`;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setTrustedContacts(parsed);
+        }
+      }
+    } catch {
+      setTrustedContacts([]);
+    }
+  }, [user?.uid, user?.role]);
+
+  const persistTrustedContacts = useCallback(async (nextContacts) => {
+    if (!user?.uid || user.role !== "client") return;
+    const storageKey = `aegisvault.trustedContacts.${user.uid}`;
+    localStorage.setItem(storageKey, JSON.stringify(nextContacts));
+    await setDoc(doc(db, "users", user.uid), { trustedContacts: nextContacts }, { merge: true });
+  }, [user?.uid, user?.role]);
+
+  const addTrustedContact = useCallback(async ({ name, phone }) => {
+    if (!name || !phone) {
+      setAlertStatus("Please enter both name and phone.");
+      return;
+    }
+    if (!isLikelyPhone(phone)) {
+      setAlertStatus("Phone format looks invalid. Use digits with optional leading +.");
+      return;
+    }
+
+    const normalizedPhone = normalizePhoneInput(phone);
+    const nextContacts = [...trustedContacts, { id: `${Date.now()}`, name, phone: normalizedPhone }];
+    setTrustedContacts(nextContacts);
+    setAlertStatus("Trusted contact added.");
+    try {
+      await persistTrustedContacts(nextContacts);
+    } catch (error) {
+      setAlertStatus(error?.message || "Saved locally, but cloud sync failed.");
+    }
+  }, [persistTrustedContacts, trustedContacts]);
+
+  const removeTrustedContact = useCallback(async (contactId) => {
+    const nextContacts = trustedContacts.filter((c) => c.id !== contactId);
+    setTrustedContacts(nextContacts);
+    setAlertStatus("Trusted contact removed.");
+    try {
+      await persistTrustedContacts(nextContacts);
+    } catch (error) {
+      setAlertStatus(error?.message || "Removed locally, but cloud sync failed.");
+    }
+  }, [persistTrustedContacts, trustedContacts]);
+
+  const triggerTrustedContactAlert = useCallback(async (reason) => {
+    if (!trustedContacts.length) {
+      setAlertStatus("No trusted contacts to alert.");
+      return;
+    }
+
+    const gps = await getCurrentGpsString();
+    const timestamp = new Date().toISOString();
+    const message = buildDistressMessage(user?.name, timestamp, gps);
+    const recipients = trustedContacts
+      .map((c) => normalizePhoneInput(c.phone))
+      .filter(Boolean)
+      .join(",");
+
+    if (!recipients) {
+      setAlertStatus("Trusted contacts are missing valid phone numbers.");
+      return;
+    }
+
+    setAlertStatus(reason === "test" ? "Opening test SMS alert..." : "Opening distress SMS alert...");
+    window.open(`sms:${recipients}?body=${encodeURIComponent(message)}`, "_self");
+  }, [trustedContacts, user?.name]);
+
+  useEffect(() => {
+    if (!showEmergency || user?.role !== "client") return;
+    triggerTrustedContactAlert("distress");
+  }, [showEmergency, triggerTrustedContactAlert, user?.role]);
+
+  const createCase = useCallback(async ({ title, priority }) => {
+    if (!user?.uid) return;
+    setCreatingCase(true);
+    try {
+      const nowIso = new Date().toISOString();
+      await addDoc(collection(db, "cases"), {
+        title,
+        status: "pending",
+        stage: 0,
+        clientUid: user.uid,
+        client: user.name,
+        lawyerUid: "",
+        lawyer: "Unassigned",
+        filed: nowIso.split("T")[0],
+        nextHearing: "TBD",
+        priority: priority || "medium",
+        timeline: [{ id: `t-${Date.now()}`, time: nowIso, label: "Case Filed", detail: "Case created by client.", type: "milestone" }],
+        updates: [],
+        evidence: [],
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      setCasesError(error?.message || "Failed to create case.");
+    } finally {
+      setCreatingCase(false);
+    }
+  }, [user?.uid, user?.name]);
+
+  const uploadEvidence = useCallback(async (caseId, file) => {
+    if (!caseId || !file) return;
+    setUploadingCaseId(caseId);
+    try {
+      const hash = await sha256Hex(file);
+      const gps = await getCurrentGpsString();
+      const timestamp = new Date().toISOString();
+      const safeName = file.name.replace(/\s+/g, "-");
+      if (!isSupabaseConfigured) {
+        const fallbackEvidenceItem = {
+          id: `e-${Date.now()}`,
+          name: file.name,
+          type: file.type?.split("/")[0] || "file",
+          hash,
+          verified: true,
+          gps,
+          timestamp,
+          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          downloadURL: "",
+          metadataPath: "",
+          storageProvider: "firestore-metadata-only",
+        };
+
+        await updateDoc(doc(db, "cases", caseId), {
+          evidence: arrayUnion(fallbackEvidenceItem),
+          timeline: arrayUnion({
+            id: `t-${Date.now()}`,
+            time: timestamp,
+            label: "Evidence Logged",
+            detail: `${file.name} metadata saved. Configure Supabase to store the actual file.`,
+            type: "evidence",
+          }),
+        });
+
+        setCasesError("Supabase is not configured. Evidence metadata was saved, but file binaries were not uploaded.");
+        return;
+      }
+
+      const objectPath = `cases/${caseId}/evidence/${Date.now()}_${safeName}`;
+      const { error: fileUploadError } = await supabase.storage
+        .from(supabaseBucket)
+        .upload(objectPath, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+
+      if (fileUploadError) {
+        throw new Error(fileUploadError.message || "Supabase file upload failed.");
+      }
+
+      const { data: urlData } = supabase.storage.from(supabaseBucket).getPublicUrl(objectPath);
+      const downloadURL = urlData?.publicUrl || "";
+
+      const metadataPayload = {
+        caseId,
+        fileName: file.name,
+        filePath: objectPath,
+        url: downloadURL,
+        gps,
+        time: timestamp,
+        hash,
+      };
+
+      const metadataPath = `cases/${caseId}/metadata/${Date.now()}_${safeName}.json`;
+      const metadataBlob = new Blob([JSON.stringify(metadataPayload, null, 2)], { type: "application/json" });
+
+      const { error: metadataUploadError } = await supabase.storage
+        .from(supabaseBucket)
+        .upload(metadataPath, metadataBlob, {
+          contentType: "application/json",
+          upsert: false,
+        });
+
+      if (metadataUploadError) {
+        throw new Error(metadataUploadError.message || "Supabase metadata upload failed.");
+      }
+
+      const evidenceItem = {
+        id: `e-${Date.now()}`,
+        name: file.name,
+        type: file.type?.split("/")[0] || "file",
+        hash,
+        verified: true,
+        gps,
+        timestamp,
+        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        downloadURL,
+        metadataPath,
+        storageProvider: "supabase",
+      };
+
+      await updateDoc(doc(db, "cases", caseId), {
+        evidence: arrayUnion(evidenceItem),
+        timeline: arrayUnion({
+          id: `t-${Date.now()}`,
+          time: timestamp,
+          label: "New Evidence Added",
+          detail: `${file.name} uploaded and verified.`,
+          type: "evidence",
+        }),
+      });
+      setCasesError("");
+    } catch (error) {
+      setCasesError(error?.message || "Failed to upload evidence.");
+    } finally {
+      setUploadingCaseId("");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setCases([]);
+      return;
+    }
+
+    setLoadingCases(true);
+    setCasesError("");
+
+    const casesRef = collection(db, "cases");
+    const constraints = user.role === "lawyer"
+      ? [where("lawyerUid", "==", user.uid)]
+      : [where("clientUid", "==", user.uid)];
+
+    const scopedQuery = query(casesRef, ...constraints);
+
+    const unsub = onSnapshot(
+      scopedQuery,
+      (snapshot) => {
+        const mapped = snapshot.docs.map((d) => mapCaseDoc(d.id, d.data()));
+        setCases(mapped);
+        setLoadingCases(false);
+      },
+      (error) => {
+        console.warn("Case subscription failed:", error?.message || error);
+        setCasesError(error?.message || "Could not load case data.");
+        setCases([]);
+        setLoadingCases(false);
+      }
+    );
+
+    return () => unsub();
+  }, [user?.uid, user?.role]);
+
+  if (authLoading) {
+    return (
+      <div className="login-screen">
+        <div className="login-card fade-in" style={{ textAlign: "center" }}>
+          <div className="login-title" style={{ fontSize: 24 }}>Checking session...</div>
+          <div className="login-sub">Restoring secure access.</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginScreen onLogin={handleLogin} errorMessage={authError} />;
 
   const isClient = user.role === "client";
 
@@ -1147,9 +1886,22 @@ export default function App() {
 
   const renderPage = () => {
     if (page === "dashboard") return isClient
-      ? <ClientDashboard user={user} onNavigate={navigate} />
-      : <LawyerDashboard user={user} />;
-    if (page === "cases") return isClient ? <ClientCases onNavigate={navigate} /> : <LawyerDashboard user={user} />;
+      ? <ClientDashboard onNavigate={navigate} cases={cases} loadingCases={loadingCases} />
+      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} />;
+    if (page === "cases") return isClient
+      ? <ClientCases cases={cases} loadingCases={loadingCases} user={user} onCreateCase={createCase} creatingCase={creatingCase} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} />
+      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} />;
+    if (page === "settings" && isClient) {
+      return (
+        <SettingsPanel
+          trustedContacts={trustedContacts}
+          onAddContact={addTrustedContact}
+          onRemoveContact={removeTrustedContact}
+          onSendTestAlert={() => triggerTrustedContactAlert("test")}
+          alertStatus={alertStatus}
+        />
+      );
+    }
     return (
       <div className="fade-in" style={{ textAlign: "center", paddingTop: 60, color: "var(--text-muted)" }}>
         <Icon name="settings" size={40} style={{ margin: "0 auto 16px", display: "block" }} />
@@ -1163,13 +1915,19 @@ export default function App() {
     <>
       {showEmergency && <EmergencyMode onClose={() => setShowEmergency(false)} />}
       <div className="app-layout">
-        <Sidebar user={user} currentPage={page} onNavigate={navigate} onLogout={() => setUser(null)} />
+        <Sidebar user={user} currentPage={page} onNavigate={navigate} onLogout={handleLogout} />
         <div className="main-content">
           <div className="page-header">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
                 <div className="page-title">{pageTitle[page]}</div>
                 <div className="page-subtitle">{pageSub[page]}</div>
+                {!isSupabaseConfigured && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#fbbf24" }}>
+                    Supabase is not configured. Evidence uploads will save metadata only.
+                  </div>
+                )}
+                {casesError && <div style={{ marginTop: 8, fontSize: 12, color: "#fca5a5" }}>{casesError}</div>}
               </div>
               {isClient && page === "dashboard" && (
                 <button onClick={() => setShowEmergency(true)} style={{ padding: "8px 16px", background: "var(--red-dim)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "var(--radius-sm)", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
