@@ -12,7 +12,8 @@
             "preLaunchTask": "Start local web server (5500)",
             "webRoot": "${workspaceFolder}"
         },
-        
+                git rm --cached firebase-config.js supabase-config.js
+        git commit -m "Remove config files with credentials"
         {
             "name": "Run App (Edge + Localhost - Register First)",
             "type": "msedge",

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import { addDoc, arrayUnion, collection, doc, getDoc, getDocFromCache, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { auth, db, isFirestoreOfflineError } from "./firebase-config.js";
 import { isSupabaseConfigured, supabase, supabaseBucket } from "./supabase-config.js";
 
 const STAGES = ["Filed", "Under Review", "Hearing Scheduled", "Hearing", "Closed"];
-const STATUS_COLORS = { hearing: "indigo", review: "amber", pending: "slate", closed: "emerald" };
+const STATUS_COLORS = { hearing: "indigo", review: "amber", pending: "slate", accepted: "emerald", declined: "red", closed: "emerald" };
 
 function mapEvidenceItem(item, idFallback) {
   return {
@@ -47,11 +47,16 @@ function mapCaseDoc(id, data) {
   const timeline = Array.isArray(data?.timeline) ? data.timeline.map((t, i) => mapTimelineItem(t, `${id}-t-${i}`)) : [];
   const updates = Array.isArray(data?.updates) ? data.updates.map((u, i) => mapUpdateItem(u, `${id}-u-${i}`)) : [];
   const evidence = Array.isArray(data?.evidence) ? data.evidence.map((e, i) => mapEvidenceItem(e, `${id}-e-${i}`)) : [];
+  const rawStatus = data?.status || "pending";
+  const requestStatus = data?.requestStatus || (["pending", "accepted", "declined"].includes(rawStatus) ? rawStatus : "accepted");
+  const caseStatus = data?.caseStatus || (["hearing", "review", "closed"].includes(rawStatus) ? rawStatus : "review");
 
   return {
     id,
     title: data?.title || data?.caseName || "Untitled Case",
-    status: data?.status || "pending",
+    status: rawStatus,
+    requestStatus,
+    caseStatus,
     stage: Number.isFinite(data?.stage) ? data.stage : 0,
     client: data?.client || data?.clientName || data?.clientEmail || "-",
     lawyer: data?.lawyer || data?.lawyerName || data?.lawyerEmail || "-",
@@ -64,6 +69,13 @@ function mapCaseDoc(id, data) {
     updates,
     evidence,
   };
+}
+
+function getCaseDisplayStatus(caseRecord) {
+  if (!caseRecord) return "pending";
+  if (caseRecord.requestStatus === "pending") return "pending";
+  if (caseRecord.requestStatus === "declined") return "declined";
+  return caseRecord.caseStatus || "review";
 }
 
 function downloadEvidenceCertificate(caseRecord) {
@@ -349,6 +361,31 @@ function SettingsPanel({
         {alertStatus && (
           <div style={{ marginTop: 12, fontSize: 12, color: "#fca5a5" }}>{alertStatus}</div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function NotificationsPanel({ notifications, onMarkRead }) {
+  return (
+    <div className="card">
+      <div className="section-heading">Notifications</div>
+      {!notifications.length && (
+        <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No notifications yet.</div>
+      )}
+      <div className="stack-sm">
+        {notifications.slice(0, 10).map((n) => (
+          <div key={n.id} className="update-item" style={{ borderColor: n.read ? "var(--border)" : "rgba(99,102,241,0.35)" }}>
+            <div className="update-body">
+              <div className="update-author">{n.title || "Notification"}</div>
+              <div className="update-text" style={{ marginTop: 2 }}>{n.message || ""}</div>
+              <div className="update-time" style={{ marginTop: 6 }}>{formatTime(n.time || new Date().toISOString())}</div>
+            </div>
+            {!n.read && (
+              <button className="btn btn-ghost" onClick={() => onMarkRead && onMarkRead(n.id)}>Mark Read</button>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -891,18 +928,50 @@ const styles = `
 `;
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin, errorMessage }) {
+function LoginScreen({ onLogin, onCreateAccount, errorMessage }) {
   const [role, setRole] = useState("client");
+  const [mode, setMode] = useState("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localError, setLocalError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const isCreateMode = mode === "create";
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setLocalError("");
     if (!email.trim() || !password) return;
+
+    if (isCreateMode) {
+      if (!name.trim()) {
+        setLocalError("Please enter your name.");
+        return;
+      }
+      if (password.length < 6) {
+        setLocalError("Password must be at least 6 characters.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setLocalError("Passwords do not match.");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      await onLogin({ email: email.trim(), password, roleHint: role });
+      if (isCreateMode) {
+        await onCreateAccount({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role,
+        });
+      } else {
+        await onLogin({ email: email.trim(), password, roleHint: role });
+      }
     } finally {
       setLoading(false);
     }
@@ -916,7 +985,19 @@ function LoginScreen({ onLogin, errorMessage }) {
           <span style={{ fontFamily: "var(--font-display)", fontSize: 20 }}>AegisVault</span>
         </div>
         <div className="login-title">Secure Access</div>
-        <div className="login-sub">A dual-layer legal safety platform. Sign in to continue.</div>
+        <div className="login-sub">
+          A dual-layer legal safety platform. {isCreateMode ? "Create your account to continue." : "Sign in to continue."}
+        </div>
+
+        <div className="role-tabs" style={{ marginBottom: 12 }}>
+          <button className={`role-tab ${!isCreateMode ? "active" : ""}`} onClick={() => { setMode("signin"); setLocalError(""); }}>
+            Sign In
+          </button>
+          <button className={`role-tab ${isCreateMode ? "active" : ""}`} onClick={() => { setMode("create"); setLocalError(""); }}>
+            Create Account
+          </button>
+        </div>
+
         <div className="role-tabs">
           <button className={`role-tab ${role === "client" ? "active" : ""}`} onClick={() => setRole("client")}>
             <Icon name="shield" size={14} style={{ display: "inline", marginRight: 6 }} />
@@ -928,16 +1009,28 @@ function LoginScreen({ onLogin, errorMessage }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {isCreateMode && (
+            <input className="input" type="text" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          )}
           <input className="input" type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
           <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          {isCreateMode && (
+            <input className="input" type="password" placeholder="Confirm password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          )}
           <button className="login-btn" type="submit" disabled={loading} style={{ opacity: loading ? 0.7 : 1, cursor: loading ? "wait" : "pointer" }}>
-            {loading ? "Signing In..." : `Sign In as ${role === "client" ? "Client" : "Attorney"}`}
+            {loading
+              ? (isCreateMode ? "Creating Account..." : "Signing In...")
+              : (isCreateMode
+                ? `Create ${role === "client" ? "Client" : "Attorney"} Account`
+                : `Sign In as ${role === "client" ? "Client" : "Attorney"}`)}
           </button>
         </form>
-        <div className="login-hint">Use your registered Firebase credentials.</div>
-        {errorMessage && (
+        <div className="login-hint">
+          {isCreateMode ? "Your account will be created in Firebase Authentication." : "Use your registered Firebase credentials."}
+        </div>
+        {(localError || errorMessage) && (
           <div style={{ marginTop: 12, padding: 10, borderRadius: "var(--radius-sm)", border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontSize: 12 }}>
-            {errorMessage}
+            {localError || errorMessage}
           </div>
         )}
       </div>
@@ -1146,16 +1239,37 @@ function ClientDashboard({ onNavigate, cases, loadingCases }) {
 }
 
 // ─── CLIENT CASES ─────────────────────────────────────────────────────────────
-function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, onUploadEvidence, uploadingCaseId, onVerifyEvidence, integrityStatusByEvidence }) {
+function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, onUploadEvidence, uploadingCaseId, onVerifyEvidence, integrityStatusByEvidence, lawyerOptions }) {
   const [newTitle, setNewTitle] = useState("");
   const [newPriority, setNewPriority] = useState("medium");
+  const [assignedLawyerUid, setAssignedLawyerUid] = useState("");
+  const [lawyerSearch, setLawyerSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredLawyerOptions = (lawyerOptions || []).filter((lawyer) => {
+    const q = lawyerSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (lawyer.searchText || "").includes(q);
+  });
+
+  const filteredCases = (cases || []).filter((caseRecord) => {
+    if (statusFilter === "all") return true;
+    return getCaseDisplayStatus(caseRecord) === statusFilter;
+  });
 
   const submitCreateCase = async (event) => {
     event.preventDefault();
     if (!newTitle.trim() || !onCreateCase) return;
-    await onCreateCase({ title: newTitle.trim(), priority: newPriority });
+    const selectedLawyer = (lawyerOptions || []).find((l) => l.uid === assignedLawyerUid);
+    await onCreateCase({
+      title: newTitle.trim(),
+      priority: newPriority,
+      lawyerUid: selectedLawyer?.uid || "",
+      lawyerName: selectedLawyer?.name || "Unassigned",
+    });
     setNewTitle("");
     setNewPriority("medium");
+    setAssignedLawyerUid("");
   };
 
   if (loadingCases) {
@@ -1169,6 +1283,18 @@ function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, on
           <div className="section-heading">Create New Case</div>
           <form onSubmit={submitCreateCase} className="stack-sm">
             <input className="input" placeholder="Case title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+            <input
+              className="input"
+              placeholder="Search lawyer by name or email"
+              value={lawyerSearch}
+              onChange={(e) => setLawyerSearch(e.target.value)}
+            />
+            <select className="input" value={assignedLawyerUid} onChange={(e) => setAssignedLawyerUid(e.target.value)}>
+              <option value="">Assign later (Unassigned)</option>
+              {filteredLawyerOptions.map((lawyer) => (
+                <option key={lawyer.uid} value={lawyer.uid}>{lawyer.name} ({lawyer.email})</option>
+              ))}
+            </select>
             <div style={{ display: "flex", gap: 10 }}>
               <select className="input" value={newPriority} onChange={(e) => setNewPriority(e.target.value)}>
                 <option value="low">Low</option>
@@ -1187,7 +1313,20 @@ function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, on
         </div>
       )}
 
-      {cases.map(c => (
+      {!!cases.length && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+          <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="pending">Pending requests</option>
+            <option value="review">Under review</option>
+            <option value="hearing">Hearing</option>
+            <option value="closed">Closed</option>
+            <option value="declined">Declined</option>
+          </select>
+        </div>
+      )}
+
+      {filteredCases.map(c => (
         <div key={c.id} className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div className={`case-priority priority-${c.priority}`} />
@@ -1195,7 +1334,7 @@ function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, on
               <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{c.title}</div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Filed {c.filed}</div>
             </div>
-            <span className={`badge badge-${STATUS_COLORS[c.status]}`}>{c.status}</span>
+            <span className={`badge badge-${STATUS_COLORS[getCaseDisplayStatus(c)] || "slate"}`}>{getCaseDisplayStatus(c)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
             <button className="btn btn-ghost" onClick={() => downloadEvidenceCertificate(c)}>
@@ -1262,14 +1401,25 @@ function ClientCases({ cases, loadingCases, user, onCreateCase, creatingCase, on
 }
 
 // ─── LAWYER DASHBOARD ─────────────────────────────────────────────────────────
-function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadingCaseId, onVerifyEvidence, integrityStatusByEvidence }) {
+function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadingCaseId, onVerifyEvidence, integrityStatusByEvidence, onUpdateCaseStatus, onClaimCase, onReassignCase, updatingCaseId, lawyerOptions }) {
   const [selectedCase, setSelectedCase] = useState(cases[0] || null);
   const [tab, setTab] = useState("timeline");
   const [updateText, setUpdateText] = useState("");
   const [updates, setUpdates] = useState([]);
+  const [caseSearch, setCaseSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [reassignLawyerUid, setReassignLawyerUid] = useState("");
+
+  const filteredCases = cases.filter((c) => {
+    const q = caseSearch.trim().toLowerCase();
+    const searchMatch = !q || (c.title || "").toLowerCase().includes(q) || (c.client || "").toLowerCase().includes(q);
+    const status = getCaseDisplayStatus(c);
+    const statusMatch = statusFilter === "all" ? true : status === statusFilter;
+    return searchMatch && statusMatch;
+  });
 
   useEffect(() => {
-    if (!cases.length) {
+    if (!filteredCases.length) {
       setSelectedCase(null);
       setUpdates([]);
       return;
@@ -1277,12 +1427,12 @@ function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadin
 
     setSelectedCase((prev) => {
       if (prev) {
-        const stillExists = cases.find((c) => c.id === prev.id);
+        const stillExists = filteredCases.find((c) => c.id === prev.id);
         if (stillExists) return stillExists;
       }
-      return cases[0];
+      return filteredCases[0];
     });
-  }, [cases]);
+  }, [filteredCases]);
 
   useEffect(() => {
     setUpdates(selectedCase?.updates || []);
@@ -1315,11 +1465,11 @@ function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadin
     return <div className="fade-in" style={{ color: "var(--text-muted)" }}>Loading assigned cases...</div>;
   }
 
-  if (!cases.length || !selectedCase) {
+  if (!filteredCases.length || !selectedCase) {
     return (
       <div className="fade-in">
         <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
-          No cases assigned yet.
+          No matching cases found.
         </div>
       </div>
     );
@@ -1331,19 +1481,26 @@ function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadin
       <div className="pane-left">
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Active Cases ({cases.length})</div>
+          <input
+            className="input"
+            placeholder="Search by case title or client"
+            value={caseSearch}
+            onChange={(e) => setCaseSearch(e.target.value)}
+            style={{ marginBottom: 12 }}
+          />
           <div className="stats-row" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 0 }}>
             <div className="stat-card" style={{ padding: 14 }}>
               <div className="stat-label" style={{ fontSize: 9 }}>Total Cases</div>
-              <div className="stat-value" style={{ fontSize: 22 }}>{cases.length}</div>
+              <div className="stat-value" style={{ fontSize: 22 }}>{filteredCases.length}</div>
             </div>
             <div className="stat-card" style={{ padding: 14 }}>
               <div className="stat-label" style={{ fontSize: 9 }}>Hearings</div>
-              <div className="stat-value" style={{ fontSize: 22 }}>{cases.filter((c) => c.nextHearing !== "TBD").length}</div>
+              <div className="stat-value" style={{ fontSize: 22 }}>{filteredCases.filter((c) => c.nextHearing !== "TBD").length}</div>
             </div>
           </div>
         </div>
         <div className="divider" />
-        {cases.map(c => (
+        {filteredCases.map(c => (
           <div key={c.id} className={`case-item ${selectedCase.id === c.id ? "active" : ""}`} onClick={() => handleCaseSelect(c)}>
             <div className={`case-priority priority-${c.priority}`} />
             <div className="case-info">
@@ -1351,7 +1508,7 @@ function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadin
               <div className="case-meta">{c.client} · {c.evidence.length} items</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <span className={`badge badge-${STATUS_COLORS[c.status]}`}>{c.status}</span>
+              <span className={`badge badge-${STATUS_COLORS[getCaseDisplayStatus(c)] || "slate"}`}>{getCaseDisplayStatus(c)}</span>
               <Icon name="chevronRight" size={14} style={{ color: "var(--text-dim)" }} />
             </div>
           </div>
@@ -1368,8 +1525,60 @@ function LawyerDashboard({ user, cases, loadingCases, onUploadEvidence, uploadin
               {selectedCase.nextHearing !== "TBD" && <> · Next Hearing: <span style={{ color: "var(--indigo-light)" }}>{selectedCase.nextHearing}</span></>}
             </div>
           </div>
-          <span className={`badge badge-${STATUS_COLORS[selectedCase.status]}`}>{selectedCase.status}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className={`badge badge-${STATUS_COLORS[getCaseDisplayStatus(selectedCase)] || "slate"}`}>{getCaseDisplayStatus(selectedCase)}</span>
+            {!selectedCase.lawyerUid && (
+              <button
+                className="btn btn-primary"
+                disabled={updatingCaseId === selectedCase.id}
+                onClick={() => onClaimCase && onClaimCase(selectedCase.id)}
+              >
+                {updatingCaseId === selectedCase.id ? "Claiming..." : "Claim Case"}
+              </button>
+            )}
+            {selectedCase.lawyerUid === user.uid && selectedCase.requestStatus === "pending" && (
+              <>
+                <button
+                  className="btn btn-primary"
+                  disabled={updatingCaseId === selectedCase.id}
+                  onClick={() => onUpdateCaseStatus && onUpdateCaseStatus(selectedCase.id, "accepted")}
+                >
+                  {updatingCaseId === selectedCase.id ? "Updating..." : "Accept"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  disabled={updatingCaseId === selectedCase.id}
+                  onClick={() => onUpdateCaseStatus && onUpdateCaseStatus(selectedCase.id, "declined")}
+                >
+                  {updatingCaseId === selectedCase.id ? "Updating..." : "Decline"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
+
+        {selectedCase.lawyerUid === user.uid && (
+          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+            <select className="input" value={reassignLawyerUid} onChange={(e) => setReassignLawyerUid(e.target.value)}>
+              <option value="">Reassign case to another lawyer</option>
+              {(lawyerOptions || []).filter((lawyer) => lawyer.uid !== user.uid).map((lawyer) => (
+                <option key={lawyer.uid} value={lawyer.uid}>{lawyer.name} ({lawyer.email})</option>
+              ))}
+            </select>
+            <button
+              className="btn btn-ghost"
+              disabled={!reassignLawyerUid || updatingCaseId === selectedCase.id}
+              onClick={() => {
+                const target = (lawyerOptions || []).find((l) => l.uid === reassignLawyerUid);
+                if (!target || !onReassignCase) return;
+                onReassignCase(selectedCase.id, target.uid, target.name, target.email);
+                setReassignLawyerUid("");
+              }}
+            >
+              {updatingCaseId === selectedCase.id ? "Updating..." : "Transfer"}
+            </button>
+          </div>
+        )}
 
         {/* Stepper */}
         <div className="card" style={{ marginBottom: 24 }}>
@@ -1590,10 +1799,27 @@ export default function App() {
   const [loadingCases, setLoadingCases] = useState(false);
   const [casesError, setCasesError] = useState("");
   const [creatingCase, setCreatingCase] = useState(false);
+  const [updatingCaseId, setUpdatingCaseId] = useState("");
   const [uploadingCaseId, setUploadingCaseId] = useState("");
   const [integrityStatusByEvidence, setIntegrityStatusByEvidence] = useState({});
+  const [lawyerOptions, setLawyerOptions] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [alertStatus, setAlertStatus] = useState("");
+
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
+
+  const pushNotification = useCallback(async ({ userUid, title, message }) => {
+    if (!userUid) return;
+    await addDoc(collection(db, "notifications"), {
+      userUid,
+      title,
+      message,
+      read: false,
+      time: new Date().toISOString(),
+      createdAt: serverTimestamp(),
+    });
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -1627,6 +1853,21 @@ export default function App() {
           await setDoc(userRef, profile, { merge: true });
         } else {
           profile = profileSnap.data();
+          const normalized = normalizeRole(profile?.role);
+          // Backfill missing legacy fields so search by email works reliably.
+          if (!profile?.email || !profile?.name || normalized !== profile?.role) {
+            await setDoc(userRef, {
+              email: profile?.email || firebaseUser.email || "",
+              name: profile?.name || firebaseUser.displayName || firebaseUser.email || "",
+              role: normalized,
+            }, { merge: true });
+            profile = {
+              ...profile,
+              email: profile?.email || firebaseUser.email || "",
+              name: profile?.name || firebaseUser.displayName || firebaseUser.email || "",
+              role: normalized,
+            };
+          }
         }
 
         setUser(buildPortalUser(firebaseUser.uid, profile, firebaseUser.email || ""));
@@ -1672,6 +1913,19 @@ export default function App() {
         createdAt: serverTimestamp(),
       }, { merge: true });
     }
+  }, []);
+
+  const handleCreateAccount = useCallback(async ({ name, email, password, role }) => {
+    setAuthError("");
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const userRef = doc(db, "users", credential.user.uid);
+    await setDoc(userRef, {
+      uid: credential.user.uid,
+      email: credential.user.email || email,
+      name: (name || "").trim(),
+      role: normalizeRole(role || "client"),
+      createdAt: serverTimestamp(),
+    }, { merge: true });
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -1801,7 +2055,7 @@ export default function App() {
     triggerTrustedContactAlert("distress");
   }, [showEmergency, triggerTrustedContactAlert, user?.role]);
 
-  const createCase = useCallback(async ({ title, priority }) => {
+  const createCase = useCallback(async ({ title, priority, lawyerUid, lawyerName }) => {
     if (!user?.uid) return;
     setCreatingCase(true);
     try {
@@ -1809,11 +2063,13 @@ export default function App() {
       await addDoc(collection(db, "cases"), {
         title,
         status: "pending",
+        requestStatus: "pending",
+        caseStatus: "review",
         stage: 0,
         clientUid: user.uid,
         client: user.name,
-        lawyerUid: "",
-        lawyer: "Unassigned",
+        lawyerUid: lawyerUid || "",
+        lawyer: lawyerName || "Unassigned",
         filed: nowIso.split("T")[0],
         nextHearing: "TBD",
         priority: priority || "medium",
@@ -1822,12 +2078,157 @@ export default function App() {
         evidence: [],
         createdAt: serverTimestamp(),
       });
+      if (lawyerUid) {
+        await pushNotification({
+          userUid: lawyerUid,
+          title: "New Case Assignment",
+          message: `${user.name} assigned a new case: ${title}`,
+        });
+      }
     } catch (error) {
       setCasesError(error?.message || "Failed to create case.");
     } finally {
       setCreatingCase(false);
     }
-  }, [user?.uid, user?.name]);
+  }, [pushNotification, user?.name, user?.uid]);
+
+  const updateCaseStatus = useCallback(async (caseId, nextStatus) => {
+    if (!caseId || !nextStatus) return;
+    const targetCase = cases.find((c) => c.id === caseId);
+    setUpdatingCaseId(caseId);
+    try {
+      const nextCaseStatus = nextStatus === "declined" ? "closed" : "review";
+      const legacyStatus = nextStatus === "accepted" ? nextCaseStatus : nextStatus;
+      await updateDoc(doc(db, "cases", caseId), {
+        status: legacyStatus,
+        requestStatus: nextStatus,
+        caseStatus: nextCaseStatus,
+        timeline: arrayUnion({
+          id: `t-${Date.now()}`,
+          time: new Date().toISOString(),
+          label: nextStatus === "accepted" ? "Case Accepted" : "Case Declined",
+          detail: `${user?.name || "Attorney"} marked this case as ${nextStatus}.`,
+          type: "legal",
+        }),
+      });
+
+      if (targetCase?.clientUid) {
+        await pushNotification({
+          userUid: targetCase.clientUid,
+          title: nextStatus === "accepted" ? "Case Accepted" : "Case Declined",
+          message: `${user?.name || "Attorney"} ${nextStatus} your case ${targetCase.title}.`,
+        });
+      }
+      setCasesError("");
+    } catch (error) {
+      setCasesError(error?.message || "Failed to update case status.");
+    } finally {
+      setUpdatingCaseId("");
+    }
+  }, [cases, pushNotification, user?.name]);
+
+  const claimCase = useCallback(async (caseId) => {
+    if (!caseId || !user?.uid) return;
+    const targetCase = cases.find((c) => c.id === caseId);
+    setUpdatingCaseId(caseId);
+    try {
+      await updateDoc(doc(db, "cases", caseId), {
+        lawyerUid: user.uid,
+        lawyer: user.name,
+        requestStatus: "accepted",
+        caseStatus: targetCase?.caseStatus || "review",
+        status: targetCase?.caseStatus || "review",
+        timeline: arrayUnion({
+          id: `t-${Date.now()}`,
+          time: new Date().toISOString(),
+          label: "Case Claimed",
+          detail: `${user.name} claimed this unassigned case.`,
+          type: "legal",
+        }),
+      });
+      if (targetCase?.clientUid) {
+        await pushNotification({
+          userUid: targetCase.clientUid,
+          title: "Lawyer Assigned",
+          message: `${user.name} is now assigned to your case ${targetCase.title}.`,
+        });
+      }
+      setCasesError("");
+    } catch (error) {
+      setCasesError(error?.message || "Failed to claim case.");
+    } finally {
+      setUpdatingCaseId("");
+    }
+  }, [cases, pushNotification, user?.name, user?.uid]);
+
+  const reassignCase = useCallback(async (caseId, nextLawyerUid, nextLawyerName, nextLawyerEmail) => {
+    if (!caseId || !nextLawyerUid) return;
+    const targetCase = cases.find((c) => c.id === caseId);
+    setUpdatingCaseId(caseId);
+    try {
+      await updateDoc(doc(db, "cases", caseId), {
+        lawyerUid: nextLawyerUid,
+        lawyer: nextLawyerName || nextLawyerEmail || "Attorney",
+        requestStatus: "pending",
+        status: "pending",
+        timeline: arrayUnion({
+          id: `t-${Date.now()}`,
+          time: new Date().toISOString(),
+          label: "Case Reassigned",
+          detail: `${user?.name || "Attorney"} reassigned this case to ${nextLawyerName || nextLawyerEmail || "another attorney"}.`,
+          type: "legal",
+        }),
+      });
+
+      await pushNotification({
+        userUid: nextLawyerUid,
+        title: "Case Reassigned to You",
+        message: `You received case ${targetCase?.title || caseId}. Please review and accept/decline.`,
+      });
+
+      if (targetCase?.clientUid) {
+        await pushNotification({
+          userUid: targetCase.clientUid,
+          title: "Case Reassigned",
+          message: `Your case ${targetCase.title} was reassigned to ${nextLawyerName || nextLawyerEmail || "another attorney"}.`,
+        });
+      }
+
+      setCasesError("");
+    } catch (error) {
+      setCasesError(error?.message || "Failed to reassign case.");
+    } finally {
+      setUpdatingCaseId("");
+    }
+  }, [cases, pushNotification, user?.name]);
+
+  useEffect(() => {
+    const lawyersQuery = query(collection(db, "users"));
+    const unsub = onSnapshot(
+      lawyersQuery,
+      (snapshot) => {
+        const mapped = snapshot.docs.map((d) => {
+          const data = d.data() || {};
+          const role = normalizeRole(data.role);
+          const email = String(data.email || "").trim();
+          const name = String(data.name || email || "Attorney").trim();
+          return {
+            uid: d.id,
+            role,
+            name,
+            email,
+            searchText: `${name} ${email} ${d.id}`.toLowerCase(),
+          };
+        }).filter((userDoc) => userDoc.role === "lawyer");
+        setLawyerOptions(mapped);
+      },
+      () => {
+        setLawyerOptions([]);
+      }
+    );
+
+    return () => unsub();
+  }, []);
 
   const uploadEvidence = useCallback(async (caseId, file) => {
     if (!caseId || !file) return;
@@ -2003,17 +2404,18 @@ export default function App() {
     setCasesError("");
 
     const casesRef = collection(db, "cases");
-    const constraints = user.role === "lawyer"
-      ? [where("lawyerUid", "==", user.uid)]
-      : [where("clientUid", "==", user.uid)];
-
-    const scopedQuery = query(casesRef, ...constraints);
+    const scopedQuery = user.role === "lawyer"
+      ? query(casesRef)
+      : query(casesRef, where("clientUid", "==", user.uid));
 
     const unsub = onSnapshot(
       scopedQuery,
       (snapshot) => {
         const mapped = snapshot.docs.map((d) => mapCaseDoc(d.id, d.data()));
-        setCases(mapped);
+        const scoped = user.role === "lawyer"
+          ? mapped.filter((c) => !c.lawyerUid || c.lawyerUid === user.uid)
+          : mapped;
+        setCases(scoped);
         setLoadingCases(false);
       },
       (error) => {
@@ -2027,6 +2429,38 @@ export default function App() {
     return () => unsub();
   }, [user?.uid, user?.role]);
 
+  useEffect(() => {
+    if (!user?.uid) {
+      setNotifications([]);
+      return;
+    }
+
+    const notificationsQuery = query(collection(db, "notifications"), where("userUid", "==", user.uid));
+    const unsub = onSnapshot(
+      notificationsQuery,
+      (snapshot) => {
+        const mapped = snapshot.docs
+          .map((d) => ({ id: d.id, ...(d.data() || {}) }))
+          .sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime());
+        setNotifications(mapped);
+      },
+      () => {
+        setNotifications([]);
+      }
+    );
+
+    return () => unsub();
+  }, [user?.uid]);
+
+  const markNotificationRead = useCallback(async (notificationId) => {
+    if (!notificationId) return;
+    try {
+      await updateDoc(doc(db, "notifications", notificationId), { read: true });
+    } catch {
+      // Keep UI resilient when notification write fails.
+    }
+  }, []);
+
   if (authLoading) {
     return (
       <div className="login-screen">
@@ -2038,7 +2472,7 @@ export default function App() {
     );
   }
 
-  if (!user) return <LoginScreen onLogin={handleLogin} errorMessage={authError} />;
+  if (!user) return <LoginScreen onLogin={handleLogin} onCreateAccount={handleCreateAccount} errorMessage={authError} />;
 
   const isClient = user.role === "client";
 
@@ -2058,26 +2492,40 @@ export default function App() {
   const renderPage = () => {
     if (page === "dashboard") return isClient
       ? <ClientDashboard onNavigate={navigate} cases={cases} loadingCases={loadingCases} />
-      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} />;
+      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} onUpdateCaseStatus={updateCaseStatus} onClaimCase={claimCase} onReassignCase={reassignCase} updatingCaseId={updatingCaseId} lawyerOptions={lawyerOptions} />;
     if (page === "cases") return isClient
-      ? <ClientCases cases={cases} loadingCases={loadingCases} user={user} onCreateCase={createCase} creatingCase={creatingCase} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} />
-      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} />;
+      ? <ClientCases cases={cases} loadingCases={loadingCases} user={user} onCreateCase={createCase} creatingCase={creatingCase} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} lawyerOptions={lawyerOptions} />
+      : <LawyerDashboard user={user} cases={cases} loadingCases={loadingCases} onUploadEvidence={uploadEvidence} uploadingCaseId={uploadingCaseId} onVerifyEvidence={verifyEvidenceIntegrity} integrityStatusByEvidence={integrityStatusByEvidence} onUpdateCaseStatus={updateCaseStatus} onClaimCase={claimCase} onReassignCase={reassignCase} updatingCaseId={updatingCaseId} lawyerOptions={lawyerOptions} />;
     if (page === "settings" && isClient) {
       return (
-        <SettingsPanel
-          trustedContacts={trustedContacts}
-          onAddContact={addTrustedContact}
-          onRemoveContact={removeTrustedContact}
-          onSendTestAlert={() => triggerTrustedContactAlert("test")}
-          alertStatus={alertStatus}
-        />
+        <div className="stack">
+          <SettingsPanel
+            trustedContacts={trustedContacts}
+            onAddContact={addTrustedContact}
+            onRemoveContact={removeTrustedContact}
+            onSendTestAlert={() => triggerTrustedContactAlert("test")}
+            alertStatus={alertStatus}
+          />
+          <NotificationsPanel notifications={notifications} onMarkRead={markNotificationRead} />
+        </div>
+      );
+    }
+    if (page === "settings") {
+      return (
+        <div className="stack fade-in">
+          <div className="card">
+            <div className="section-heading">Attorney Settings</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Account and practice settings will appear here.</div>
+          </div>
+          <NotificationsPanel notifications={notifications} onMarkRead={markNotificationRead} />
+        </div>
       );
     }
     return (
       <div className="fade-in" style={{ textAlign: "center", paddingTop: 60, color: "var(--text-muted)" }}>
         <Icon name="settings" size={40} style={{ margin: "0 auto 16px", display: "block" }} />
-        <div style={{ fontSize: 16, fontWeight: 600 }}>Settings</div>
-        <div style={{ fontSize: 13, marginTop: 6 }}>Configuration options coming soon.</div>
+        <div style={{ fontSize: 16, fontWeight: 600 }}>Coming Soon</div>
+        <div style={{ fontSize: 13, marginTop: 6 }}>This section is being expanded.</div>
       </div>
     );
   };
@@ -2114,6 +2562,11 @@ export default function App() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--emerald)", boxShadow: "0 0 8px var(--emerald)" }} />
                   <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Live feed active</span>
+                </div>
+              )}
+              {unreadNotifications > 0 && (
+                <div style={{ marginTop: 8, fontSize: 12, color: "var(--indigo-light)" }}>
+                  {unreadNotifications} unread notification{unreadNotifications > 1 ? "s" : ""}
                 </div>
               )}
             </div>
