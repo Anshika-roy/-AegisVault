@@ -70,3 +70,7 @@ local-config.js
 *.p12
 private_keys/
 secrets/
+
+# Keep deploy-safe compatibility shims tracked for GitHub Pages.
+!firebase-config.js
+!supabase-config.js
