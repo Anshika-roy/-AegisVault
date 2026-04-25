@@ -9,6 +9,33 @@ import { isSupabaseConfigured, supabase, supabaseBucket } from "./supabase-confi
 const STAGES = ["Filed", "Under Review", "Hearing Scheduled", "Hearing", "Closed"];
 const STATUS_COLORS = { hearing: "indigo", review: "amber", pending: "slate", accepted: "emerald", declined: "red", closed: "emerald" };
 
+function toIsoString(value, fallback = new Date().toISOString()) {
+  if (!value) return fallback;
+
+  if (typeof value === "string") return value;
+
+  if (value instanceof Date) {
+    const ts = value.getTime();
+    return Number.isNaN(ts) ? fallback : value.toISOString();
+  }
+
+  if (typeof value?.toDate === "function") {
+    try {
+      return value.toDate().toISOString();
+    } catch {
+      return fallback;
+    }
+  }
+
+  if (typeof value?.seconds === "number") {
+    const millis = value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+    const date = new Date(millis);
+    return Number.isNaN(date.getTime()) ? fallback : date.toISOString();
+  }
+
+  return fallback;
+}
+
 function mapEvidenceItem(item, idFallback) {
   return {
     id: item?.id || idFallback,
@@ -18,7 +45,7 @@ function mapEvidenceItem(item, idFallback) {
     verified: item?.verified !== false,
     gps: item?.gps || ((item?.latitude != null && item?.longitude != null) ? `${item.latitude},${item.longitude}` : "-") ,
     downloadURL: item?.downloadURL || "",
-    timestamp: item?.timestamp || item?.createdAt || new Date().toISOString(),
+    timestamp: toIsoString(item?.timestamp || item?.createdAt),
     size: item?.size || "-",
   };
 }
@@ -26,7 +53,7 @@ function mapEvidenceItem(item, idFallback) {
 function mapTimelineItem(item, idFallback) {
   return {
     id: item?.id || idFallback,
-    time: item?.time || item?.timestamp || new Date().toISOString(),
+    time: toIsoString(item?.time || item?.timestamp),
     label: item?.label || item?.title || "Case update",
     detail: item?.detail || item?.text || "",
     type: item?.type || "update",
@@ -38,7 +65,7 @@ function mapUpdateItem(item, idFallback) {
     id: item?.id || idFallback,
     author: item?.author || item?.authorName || "System",
     role: item?.role || "lawyer",
-    time: item?.time || item?.timestamp || new Date().toISOString(),
+    time: toIsoString(item?.time || item?.timestamp),
     text: item?.text || "",
   };
 }
@@ -62,7 +89,7 @@ function mapCaseDoc(id, data) {
     lawyer: data?.lawyer || data?.lawyerName || data?.lawyerEmail || "-",
     clientUid: data?.clientUid || "",
     lawyerUid: data?.lawyerUid || "",
-    filed: data?.filed || data?.createdAt || "-",
+    filed: toIsoString(data?.filed || data?.createdAt),
     nextHearing: data?.nextHearing || "TBD",
     priority: data?.priority || "medium",
     timeline,
