@@ -4,11 +4,12 @@
  * and serving them from cache when the network is unavailable
  */
 
-const CACHE_VERSION = 'aegisvault-v2';
+const CACHE_VERSION = 'aegisvault-v4';
 const CACHE_ASSETS = [
   './',
   './index-pwa.html',
   './index.html',
+  './AegisVault_1.js',
   './lawyers.html',
   './client-dashboard.html',
   './lawyer-dashboard.html',
@@ -112,7 +113,11 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, responseClone));
             return response;
           })
-          .catch(() => caches.match('./index-pwa.html') || caches.match('./index.html'));
+          .catch(() => {
+            // For non-HTML requests, never fall back to HTML documents.
+            // Returning HTML for JS/CSS requests can cause blank-page crashes.
+            return new Response('', { status: 504, statusText: 'Offline' });
+          });
       })
   );
 });
