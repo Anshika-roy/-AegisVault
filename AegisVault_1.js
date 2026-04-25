@@ -3,8 +3,8 @@ import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import { addDoc, arrayUnion, collection, doc, getDoc, getDocFromCache, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import { auth, db, isFirestoreOfflineError } from "./firebase-config.js";
-import { isSupabaseConfigured, supabase, supabaseBucket } from "./supabase-config.js";
+import { auth, db, isFirestoreOfflineError } from "./firebase-public-config.js";
+import { isSupabaseConfigured, supabase, supabaseBucket } from "./supabase-public-config.js";
 
 const STAGES = ["Filed", "Under Review", "Hearing Scheduled", "Hearing", "Closed"];
 const STATUS_COLORS = { hearing: "indigo", review: "amber", pending: "slate", accepted: "emerald", declined: "red", closed: "emerald" };
