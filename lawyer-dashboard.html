@@ -13,11 +13,20 @@
   <link rel="stylesheet" href="./app.css" />
   <title>Lawyer Dashboard - AegisVault</title>
   <style>
+    body {
+      background:
+        radial-gradient(900px 360px at 0% -15%, #e9f8f0 0%, transparent 60%),
+        radial-gradient(900px 360px at 100% -20%, #eef5ff 0%, transparent 62%),
+        var(--gray-50);
+    }
+
     .dashboard-header {
-      background: linear-gradient(135deg, #10b981, #059669);
+      background: linear-gradient(145deg, #0f4cd6, #2b6dff);
       color: var(--white);
       padding: var(--spacing-2xl) var(--spacing-lg);
       margin-bottom: var(--spacing-2xl);
+      border-radius: 0 0 22px 22px;
+      box-shadow: 0 18px 34px rgba(15, 76, 214, 0.22);
     }
 
     .dashboard-title {
@@ -34,17 +43,25 @@
     }
 
     .stat-card {
-      background: var(--white);
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.75);
       padding: var(--spacing-lg);
-      border-radius: var(--radius-lg);
+      border-radius: 18px;
       box-shadow: var(--shadow-md);
       text-align: center;
+      transition: var(--transition);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
     }
 
     .stat-value {
       font-size: 2rem;
       font-weight: 700;
-      color: #10b981;
+      color: #0f4cd6;
     }
 
     .stat-label {
@@ -54,12 +71,13 @@
     }
 
     .request-card {
-      background: var(--white);
-      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      border-radius: 16px;
       padding: var(--spacing-lg);
       margin-bottom: var(--spacing-lg);
-      box-shadow: var(--shadow-md);
-      border-left: 4px solid #10b981;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+      border-left: 4px solid #0f4cd6;
+      border: 1px solid #e5edf8;
       transition: var(--transition);
     }
 
@@ -112,11 +130,12 @@
     }
 
     .request-description {
-      background: var(--gray-50);
+      background: linear-gradient(180deg, #f7faff 0%, #f3f8ff 100%);
       padding: var(--spacing-md);
       border-radius: var(--radius-md);
       margin-bottom: var(--spacing-md);
       color: var(--gray-700);
+      border: 1px solid #e3ecfb;
     }
 
     .request-actions {
@@ -128,9 +147,10 @@
     .empty-state {
       text-align: center;
       padding: var(--spacing-2xl) var(--spacing-lg);
-      background: var(--white);
+      background: #ffffff;
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-sm);
+      border: 1px solid #e6edf8;
     }
 
     .empty-icon {
@@ -141,9 +161,9 @@
     .tabs {
       display: flex;
       gap: 0;
-      border-bottom: 2px solid var(--gray-200);
+      border-bottom: 1px solid #dde7f5;
       margin-bottom: var(--spacing-2xl);
-      background: var(--white);
+      background: linear-gradient(180deg, rgba(243, 248, 255, 0.8), rgba(255, 255, 255, 0.6));
       padding: 0 var(--spacing-lg);
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     }
@@ -162,12 +182,13 @@
     }
 
     .tab-btn:hover {
-      color: #10b981;
+      color: #0f4cd6;
     }
 
     .tab-btn.active {
-      color: #10b981;
-      border-bottom-color: #10b981;
+      color: #0f4cd6;
+      border-bottom-color: #0f4cd6;
+      background: linear-gradient(180deg, #f6f9ff 0%, #ffffff 100%);
     }
 
     .tab-content {

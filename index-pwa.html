@@ -4,568 +4,752 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Connect with professional lawyers - Progressive Web App" />
-  <meta name="theme-color" content="#1e40af" />
+  <meta name="theme-color" content="#0f4cd6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="AegisVault" />
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%231e40af' width='100' height='100' rx='20'/><text x='50' y='55' text-anchor='middle' font-size='50' font-weight='bold' fill='white' font-family='Arial'>AV</text></svg>" />
-  <link rel="stylesheet" href="./app.css" />
-  <title>AegisVault - Find Your Lawyer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230f4cd6' width='100' height='100' rx='20'/><text x='50' y='56' text-anchor='middle' font-size='50' font-weight='bold' fill='white' font-family='Arial'>AV</text></svg>" />
+  <title>AegisVault | Digital Evidence Vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    .hero {
-      background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-      color: var(--white);
-      padding: 6rem var(--spacing-lg) 4rem;
-      text-align: center;
-      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    :root {
+      --bg: #f3f6fb;
+      --card: rgba(255, 255, 255, 0.84);
+      --card-strong: #ffffff;
+      --line: #e5ebf5;
+      --text: #0f172a;
+      --muted: #64748b;
+      --blue: #0f4cd6;
+      --blue-2: #2a6aff;
+      --blue-soft: #e8f0ff;
+      --green: #16a34a;
+      --red: #dc2626;
+      --shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 14px 34px rgba(15, 23, 42, 0.09);
+      --shadow-lg: 0 22px 48px rgba(15, 23, 42, 0.13);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
     }
 
-    .hero h1 {
-      color: var(--white);
-      font-size: 3rem;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .hero p {
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 1.25rem;
-      margin-bottom: var(--spacing-2xl);
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .cta-buttons {
-      display: flex;
-      gap: var(--spacing-lg);
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .cta-buttons .btn {
-      padding: var(--spacing-md) var(--spacing-2xl);
-      font-size: 1.125rem;
-    }
-
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: var(--spacing-2xl);
-      padding: var(--spacing-2xl) var(--spacing-lg);
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .feature-card {
-      background: var(--white);
-      padding: var(--spacing-2xl) var(--spacing-lg);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-md);
-      text-align: center;
-      transition: var(--transition);
-    }
-
-    .feature-card:hover {
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-4px);
-    }
-
-    .feature-icon {
-      font-size: 3rem;
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .feature-card h3 {
-      color: var(--gray-900);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .feature-card p {
-      color: var(--gray-700);
+    * {
       margin: 0;
-      font-size: 0.95rem;
-      line-height: 1.6;
+      padding: 0;
+      box-sizing: border-box;
     }
 
-    .auth-section {
-      background: var(--gray-50);
-      padding: var(--spacing-2xl) var(--spacing-lg);
+    body {
+      font-family: "Poppins", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 520px at -10% -10%, #e9f0ff 0%, transparent 62%),
+        radial-gradient(1200px 540px at 110% -20%, #edf5ff 0%, transparent 63%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 32px;
     }
 
-    .auth-container {
-      max-width: 1200px;
+    .shell {
+      width: min(100%, 2560px);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--spacing-2xl);
+      gap: 24px;
     }
 
-    .auth-card {
-      background: var(--white);
-      padding: var(--spacing-2xl);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-md);
-    }
-
-    .auth-card h3 {
-      color: var(--primary-dark);
-      margin-bottom: var(--spacing-lg);
-      text-align: center;
-    }
-
-    .form-group {
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: var(--spacing-sm);
-      font-weight: 600;
-      color: var(--gray-800);
-    }
-
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: var(--spacing-md);
-      border: 2px solid var(--gray-200);
-      border-radius: var(--radius-md);
-      font-size: 1rem;
-      transition: var(--transition);
-    }
-
-    .form-group input:focus, .form-group select:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
-    }
-
-    .btn-submit {
-      width: 100%;
-      padding: var(--spacing-md);
-      background: var(--primary-color);
-      color: var(--white);
-      border: none;
-      border-radius: var(--radius-md);
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .btn-submit:hover {
-      background: var(--primary-light);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .form-footer {
-      text-align: center;
-      margin-top: var(--spacing-lg);
-      font-size: 0.875rem;
-      color: var(--gray-600);
-    }
-
-    .form-footer a {
-      color: var(--primary-color);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .form-footer a:hover {
-      text-decoration: underline;
-    }
-
-    .alert {
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-md);
-      margin-bottom: var(--spacing-lg);
+    .topbar {
       display: flex;
       align-items: center;
-      gap: var(--spacing-md);
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(16px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
     }
 
-    .alert-success {
-      background: rgba(16, 185, 129, 0.1);
-      color: #065f46;
-      border-left: 4px solid #10b981;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #0c2d80;
+      letter-spacing: 0.2px;
     }
 
-    .alert-error {
-      background: rgba(239, 68, 68, 0.1);
-      color: #7f1d1d;
-      border-left: 4px solid #ef4444;
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(145deg, var(--blue), var(--blue-2));
+      box-shadow: 0 12px 24px rgba(15, 76, 214, 0.35);
+      font-size: 0.95rem;
+      font-weight: 700;
     }
 
-    .alert-info {
-      background: rgba(14, 165, 233, 0.1);
-      color: #0c4a6e;
-      border-left: 4px solid #0ea5e9;
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .pwa-feature {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: var(--white);
-      padding: var(--spacing-2xl) var(--spacing-lg);
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #1e345f;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--blue);
+      border: 2px solid #fff;
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 7px 10px;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: linear-gradient(145deg, var(--blue), var(--blue-2));
+    }
+
+    .profile-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #1d335d;
+    }
+
+    .profile-role {
+      font-size: 0.72rem;
+      color: #7186a9;
+    }
+
+    .top-link {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      color: #17336f;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 10px 12px;
+      text-decoration: none;
+    }
+
+    .top-link:hover {
+      background: var(--blue-soft);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.9fr 1fr;
+      gap: 24px;
+    }
+
+    .left-col,
+    .right-col {
+      display: grid;
+      align-content: start;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      padding: 22px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .panel-head h2 {
+      font-size: 1.06rem;
+      font-weight: 600;
+      color: #0f2148;
+    }
+
+    .upload-btn {
+      border: none;
+      background: linear-gradient(145deg, var(--blue), var(--blue-2));
+      color: #fff;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 14px;
+      padding: 12px 20px;
+      cursor: pointer;
+      box-shadow: 0 14px 26px rgba(15, 76, 214, 0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .secondary-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #17336f;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 14px;
+      padding: 12px 20px;
+      cursor: pointer;
+    }
+
+    .upload-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .secondary-btn:hover {
+      transform: translateY(-1px);
+      background: var(--blue-soft);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .stat {
+      background: var(--card-strong);
+      border: 1px solid var(--line);
       border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .stat-title {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 2.04rem;
+      line-height: 1;
+      font-weight: 700;
+      color: #0b2d82;
+    }
+
+    .stat-note {
+      margin-top: 7px;
+      font-size: 0.73rem;
+      color: #6f84a7;
+    }
+
+    .dropzone {
+      min-height: 190px;
+      border: 2px dashed #bed1f6;
+      border-radius: var(--radius-lg);
+      background: #fff;
+      display: grid;
+      place-items: center;
       text-align: center;
-      margin: var(--spacing-2xl) 0;
+      padding: 24px;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
     }
 
-    .pwa-feature h3 {
-      color: var(--white);
-      margin-bottom: var(--spacing-md);
+    .dropzone.drag {
+      border-color: var(--blue);
+      background: #f6f9ff;
     }
 
-    .pwa-feature p {
-      color: rgba(255, 255, 255, 0.95);
-      margin: 0;
+    .drop-title {
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: #1e335f;
+      margin-bottom: 6px;
     }
 
-    @media (max-width: 768px) {
-      .hero h1 {
-        font-size: 2rem;
+    .drop-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .chips {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.76rem;
+      color: #334f77;
+      background: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 14px;
+    }
+
+    .preview {
+      min-height: 226px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, #f3f7ff, #ffffff);
+      color: #486189;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-weight: 500;
+      padding: 12px;
+    }
+
+    .meta {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: #fff;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid #edf2f9;
+      padding-bottom: 8px;
+      font-size: 0.84rem;
+    }
+
+    .meta-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .meta-key {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .meta-val {
+      color: #13284f;
+      font-weight: 600;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 6px 10px;
+      border: 1px solid transparent;
+    }
+
+    .ok {
+      background: #e8f8ef;
+      color: #0b6f33;
+      border-color: #b7e6c7;
+    }
+
+    .bad {
+      background: #ffeded;
+      color: #8d1313;
+      border-color: #ffc7c7;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 18px;
+      display: grid;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 3px;
+      bottom: 3px;
+      width: 2px;
+      background: linear-gradient(#afc4ea, #d9e5fb);
+    }
+
+    .event {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fff;
+      padding: 10px 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .event::before {
+      content: "";
+      position: absolute;
+      left: -19px;
+      top: 14px;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--blue);
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 2px #cfddf8;
+    }
+
+    .event h4 {
+      font-size: 0.86rem;
+      color: #142a56;
+      margin-bottom: 3px;
+    }
+
+    .event p {
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .note {
+      font-size: 0.75rem;
+      color: #5c7398;
+    }
+
+    .nav-auth {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      color: #17336f;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .nav-auth:hover {
+      background: var(--blue-soft);
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      letter-spacing: 0.2px;
+    }
+
+    svg {
+      width: 19px;
+      height: 19px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    @media (max-width: 1280px) {
+      .layout {
+        grid-template-columns: 1fr;
       }
 
-      .hero p {
-        font-size: 1rem;
-      }
-
-      .cta-buttons {
-        flex-direction: column;
-      }
-
-      .cta-buttons .btn {
-        width: 100%;
-      }
-
-      .auth-container {
+      .stats,
+      .detail-grid {
         grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a href="./" class="navbar-brand">⚖️ AegisVault</a>
-      <ul class="navbar-nav">
-        <li id="nav-logged-out">
-          <a href="#auth-section">Get Started</a>
-        </li>
-        <li id="nav-logged-in" style="display: none;">
-          <a href="" id="dashboard-link"></a>
-        </li>
-        <li>
-          <button id="install-button" class="btn btn-sm" style="display: none;">📲 Install App</button>
-        </li>
-      </ul>
-    </div>
-  </nav>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="./index-pwa.html" style="text-decoration:none;">
+        <div class="logo">AV</div>
+        AegisVault
+      </a>
+      <div class="top-actions">
+        <a class="top-link" href="./lawyers.html">Find Lawyers</a>
+        <a class="nav-auth" href="./login.html" id="login-link">Login</a>
+        <a class="nav-auth" href="./register.html" id="register-link">Register</a>
+        <button id="install-button" class="icon-btn" aria-label="Install App" style="display:none;">⬇</button>
+        <button class="icon-btn" aria-label="Notifications">
+          <span class="dot"></span>
+          <svg viewBox="0 0 24 24"><path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+        </button>
+        <div class="profile">
+          <div class="avatar" id="profile-avatar">AG</div>
+          <div>
+            <div class="profile-name" id="profile-name">Guest</div>
+            <div class="profile-role" id="profile-role">Secure Mode</div>
+          </div>
+        </div>
+        <button id="logout-btn" class="secondary-btn" style="display:none;">Logout</button>
+      </div>
+    </header>
 
-  <!-- Hero Section -->
-  <div class="hero">
-    <h1>⚖️ AegisVault</h1>
-    <p>Connect with professional lawyers for your legal needs. Get expert advice right from your phone.</p>
-    
-    <div id="hero-guest" class="cta-buttons">
-      <button class="btn btn-primary btn-lg" onclick="scrollToAuth('login')">Sign In</button>
-      <button class="btn btn-outline" onclick="scrollToAuth('register')">Create Account</button>
-    </div>
+    <main class="layout">
+      <section class="left-col">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Main Dashboard</h2>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="upload-btn" id="upload-btn">Upload Evidence</button>
+              <button class="secondary-btn" id="dashboard-btn">Open Dashboard</button>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-title">Total Evidence</div>
+              <div class="stat-value">1,284</div>
+              <div class="stat-note">Vault integrity: 99.98%</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Recent Uploads</div>
+              <div class="stat-value">37</div>
+              <div class="stat-note">Last 24 hours</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Flagged Evidence</div>
+              <div class="stat-value" style="color:#b42318;">4</div>
+              <div class="stat-note">Requires legal review</div>
+            </div>
+          </div>
+        </article>
 
-    <div id="hero-logged-in" style="display: none; text-align: center;">
-      <p>Welcome back! 👋</p>
-      <button class="btn btn-outline btn-lg" id="hero-dashboard-btn"></button>
-    </div>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Evidence Upload</h2>
+            <span class="note">Secure drag and drop</span>
+          </div>
+          <div class="dropzone" id="dropzone">
+            <div>
+              <div class="drop-title">Drag & Drop Upload Box</div>
+              <div class="drop-sub">or click to browse encrypted files</div>
+              <div class="chips">
+                <span class="chip">
+                  <svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v10H4z"/><circle cx="12" cy="12" r="3"/></svg>
+                  Camera
+                </span>
+                <span class="chip">
+                  <svg viewBox="0 0 24 24"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M20 21H4"/></svg>
+                  File Upload
+                </span>
+                <span class="chip">
+                  <svg viewBox="0 0 24 24"><path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                  GPS Location
+                </span>
+                <span class="chip">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+                  Timestamp
+                </span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </section>
+
+      <aside class="right-col">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Evidence Detail Panel</h2>
+            <span class="note">Case AGV-2026-4402</span>
+          </div>
+          <div class="detail-grid">
+            <div class="preview">
+              Image Preview
+              <span class="note">4K CCTV still frame</span>
+            </div>
+            <div class="meta">
+              <div class="meta-row">
+                <span class="meta-key">Timestamp</span>
+                <span class="meta-val">2026-04-26 09:18:14 UTC</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">GPS Location</span>
+                <span class="meta-val">28.6139, 77.2090</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Hash ID</span>
+                <span class="meta-val mono">b5af...8f2d91c4aa70</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Uploaded By</span>
+                <span class="meta-val">Officer A. Roy</span>
+              </div>
+              <div class="badges">
+                <span class="badge ok">Verified</span>
+                <span class="badge bad">Tampered</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Chain of Custody</h2>
+            <span class="note">Immutable timeline</span>
+          </div>
+          <div class="timeline">
+            <div class="event">
+              <h4>Uploaded</h4>
+              <p>09:18 UTC by Officer A. Roy · Source verified</p>
+            </div>
+            <div class="event">
+              <h4>Accessed</h4>
+              <p>09:42 UTC by Legal Analyst · Read-only session</p>
+            </div>
+            <div class="event">
+              <h4>Shared</h4>
+              <p>10:07 UTC with Court Unit · Signed transfer receipt</p>
+            </div>
+          </div>
+        </article>
+      </aside>
+    </main>
   </div>
 
-  <!-- Features Section -->
-  <div style="background: var(--white); padding: var(--spacing-2xl) var(--spacing-lg);">
-    <div style="max-width: 1200px; margin: 0 auto;">
-      <h2 style="text-align: center; margin-bottom: var(--spacing-2xl);">Why Choose AegisVault?</h2>
-
-      <div class="features">
-        <div class="feature-card">
-          <div class="feature-icon">🔍</div>
-          <h3>Find the Right Lawyer</h3>
-          <p>Browse verified lawyers by specialization and connect with the perfect match for your case.</p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">💬</div>
-          <h3>Direct Communication</h3>
-          <p>Chat directly with lawyers after they accept your request. No intermediaries.</p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">📱</div>
-          <h3>Works Offline</h3>
-          <p>Our PWA works even without internet. Stay connected anytime, anywhere.</p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <h3>Fast & Secure</h3>
-          <p>Lightning-fast performance with enterprise-grade security for your legal matters.</p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">📲</div>
-          <h3>Install Like an App</h3>
-          <p>Install AegisVault directly on your device for quick access without the app store.</p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🔔</div>
-          <h3>Smart Notifications</h3>
-          <p>Get real-time notifications when lawyers respond to your requests.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PWA Feature Highlight -->
-  <div class="container">
-    <div class="pwa-feature">
-      <h3>📲 Progressive Web App</h3>
-      <p>AegisVault is a PWA - install it like a native app, works offline, and is always in your pocket!</p>
-    </div>
-  </div>
-
-  <!-- Authentication Section -->
-  <div class="auth-section" id="auth-section">
-    <div class="auth-container">
-      <!-- Login Card -->
-      <div class="auth-card">
-        <h3>Sign In</h3>
-        <form id="login-form" onsubmit="handleLogin(event)">
-          <div id="login-alert"></div>
-
-          <div class="form-group">
-            <label for="login-email">Email Address</label>
-            <input 
-              type="email" 
-              id="login-email" 
-              required 
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <button type="submit" class="btn-submit">Sign In</button>
-
-          <div class="form-footer">
-            Don't have an account? <a href="#" onclick="switchAuthMode('register'); return false;">Create one</a>
-          </div>
-        </form>
-      </div>
-
-      <!-- Register Card -->
-      <div class="auth-card" id="register-card" style="display: none;">
-        <h3>Create Account</h3>
-        <form id="register-form" onsubmit="handleRegister(event)">
-          <div id="register-alert"></div>
-
-          <div class="form-group">
-            <label for="register-name">Full Name</label>
-            <input 
-              type="text" 
-              id="register-name" 
-              required 
-              placeholder="John Doe"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="register-email">Email Address</label>
-            <input 
-              type="email" 
-              id="register-email" 
-              required 
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="register-role">I am a...</label>
-            <select id="register-role" required>
-              <option value="">Select one</option>
-              <option value="client">Client (Looking for Lawyer)</option>
-              <option value="lawyer">Lawyer (Offering Services)</option>
-            </select>
-          </div>
-
-          <button type="submit" class="btn-submit">Create Account</button>
-
-          <div class="form-footer">
-            Already have an account? <a href="#" onclick="switchAuthMode('login'); return false;">Sign in</a>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-content">
-      <div class="footer-section">
-        <h4>AegisVault</h4>
-        <p>Connecting clients with professional lawyers through a modern platform.</p>
-      </div>
-      <div class="footer-section">
-        <h4>Features</h4>
-        <a href="./lawyers.html">Find Lawyers</a>
-        <a href="#">My Dashboard</a>
-        <a href="#">Messages</a>
-      </div>
-      <div class="footer-section">
-        <h4>Support</h4>
-        <a href="#">Contact Us</a>
-        <a href="#">FAQs</a>
-        <a href="#">Privacy Policy</a>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <p>&copy; 2024 AegisVault. All rights reserved. | PWA by GitHub Copilot</p>
-    </div>
-  </footer>
-
-  <!-- Scripts -->
   <script src="./app.js"></script>
   <script>
-    // Check if user is already logged in
-    document.addEventListener('DOMContentLoaded', () => {
+    const dz = document.getElementById('dropzone');
+    const profileName = document.getElementById('profile-name');
+    const profileRole = document.getElementById('profile-role');
+    const profileAvatar = document.getElementById('profile-avatar');
+    const logoutBtn = document.getElementById('logout-btn');
+    const loginLink = document.getElementById('login-link');
+    const registerLink = document.getElementById('register-link');
+    const uploadBtn = document.getElementById('upload-btn');
+    const dashboardBtn = document.getElementById('dashboard-btn');
+
+    function routeDashboard(user) {
+      if (!user) {
+        return;
+      }
+
+      if (user.role === 'lawyer') {
+        window.location.href = './lawyer-dashboard.html';
+      } else {
+        window.location.href = './client-dashboard.html';
+      }
+    }
+
+    function refreshUserUI() {
       const user = getCurrentUser();
 
-      if (user) {
-        // User is logged in
-        document.getElementById('nav-logged-out').style.display = 'none';
-        document.getElementById('nav-logged-in').style.display = 'block';
-        document.getElementById('hero-guest').style.display = 'none';
-        document.getElementById('hero-logged-in').style.display = 'block';
-
-        const dashboardLink = user.role === 'lawyer' ? 
-          './lawyer-dashboard.html' : './client-dashboard.html';
-        const dashboardText = user.role === 'lawyer' ? 
-          '👨‍⚖️ My Cases' : '📋 My Requests';
-
-        document.getElementById('dashboard-link').href = dashboardLink;
-        document.getElementById('dashboard-link').textContent = dashboardText;
-        document.getElementById('hero-dashboard-btn').href = dashboardLink;
-        document.getElementById('hero-dashboard-btn').textContent = `Go to Dashboard`;
-        document.getElementById('hero-dashboard-btn').onclick = () => {
-          window.location.href = dashboardLink;
-        };
+      if (!user) {
+        profileName.textContent = 'Guest';
+        profileRole.textContent = 'Secure Mode';
+        profileAvatar.textContent = 'AG';
+        logoutBtn.style.display = 'none';
+        loginLink.style.display = 'inline-flex';
+        registerLink.style.display = 'inline-flex';
+        return;
       }
+
+      profileName.textContent = user.name;
+      profileRole.textContent = user.role === 'lawyer' ? 'Legal Counsel' : 'Evidence Owner';
+      profileAvatar.textContent = user.name
+        .split(' ')
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+      logoutBtn.style.display = 'inline-flex';
+      loginLink.style.display = 'none';
+      registerLink.style.display = 'none';
+    }
+
+    logoutBtn.addEventListener('click', () => {
+      logoutUser();
+      refreshUserUI();
     });
 
-    /**
-     * Handle login form submission
-     */
-    function handleLogin(event) {
-      event.preventDefault();
+    uploadBtn.addEventListener('click', () => {
+      window.location.href = './lawyers.html';
+    });
 
-      const email = document.getElementById('login-email').value.trim();
-      const alertDiv = document.getElementById('login-alert');
-
-      if (!email) {
-        showAlert(alertDiv, 'Please enter your email', 'error');
+    dashboardBtn.addEventListener('click', () => {
+      const user = getCurrentUser();
+      if (!user) {
+        window.location.href = './login.html';
         return;
       }
+      routeDashboard(user);
+    });
 
-      try {
-        const user = loginUser(email);
-        showAlert(alertDiv, `Welcome back, ${user.name}!`, 'success');
+    ['dragenter', 'dragover'].forEach((name) => {
+      dz.addEventListener(name, (event) => {
+        event.preventDefault();
+        dz.classList.add('drag');
+      });
+    });
+    ['dragleave', 'drop'].forEach((name) => {
+      dz.addEventListener(name, (event) => {
+        event.preventDefault();
+        dz.classList.remove('drag');
+      });
+    });
 
-        setTimeout(() => {
-          const dashboardLink = user.role === 'lawyer' ? 
-            './lawyer-dashboard.html' : './client-dashboard.html';
-          window.location.href = dashboardLink;
-        }, 1500);
-      } catch (error) {
-        showAlert(alertDiv, error.message, 'error');
-      }
-    }
+    dz.addEventListener('click', () => {
+      window.location.href = './lawyers.html';
+    });
 
-    /**
-     * Handle register form submission
-     */
-    function handleRegister(event) {
-      event.preventDefault();
-
-      const name = document.getElementById('register-name').value.trim();
-      const email = document.getElementById('register-email').value.trim();
-      const role = document.getElementById('register-role').value;
-      const alertDiv = document.getElementById('register-alert');
-
-      if (!name || !email || !role) {
-        showAlert(alertDiv, 'Please fill in all fields', 'error');
-        return;
-      }
-
-      try {
-        const user = registerUser(name, email, role);
-        showAlert(alertDiv, 'Account created successfully! Logging you in...', 'success');
-
-        // Auto-login
-        loginUser(email);
-
-        setTimeout(() => {
-          const dashboardLink = role === 'lawyer' ? 
-            './lawyer-dashboard.html' : './client-dashboard.html';
-          window.location.href = dashboardLink;
-        }, 1500);
-      } catch (error) {
-        showAlert(alertDiv, error.message, 'error');
-      }
-    }
-
-    /**
-     * Switch between login and register forms
-     */
-    function switchAuthMode(mode) {
-      const loginForm = document.getElementById('login-form').parentElement;
-      const registerCard = document.getElementById('register-card');
-
-      if (mode === 'register') {
-        loginForm.style.display = 'none';
-        registerCard.style.display = 'block';
-      } else {
-        loginForm.style.display = 'block';
-        registerCard.style.display = 'none';
-      }
-    }
-
-    /**
-     * Show alert message
-     */
-    function showAlert(container, message, type = 'info') {
-      container.innerHTML = `
-        <div class="alert alert-${type}">
-          <span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
-          <div>${message}</div>
-        </div>
-      `;
-
-      if (type !== 'error') {
-        setTimeout(() => {
-          container.innerHTML = '';
-        }, 5000);
-      }
-    }
-
-    /**
-     * Scroll to authentication section
-     */
-    function scrollToAuth(mode) {
-      if (mode === 'register') {
-        switchAuthMode('register');
-      } else {
-        switchAuthMode('login');
-      }
-
-      document.getElementById('auth-section').scrollIntoView({ behavior: 'smooth' });
-    }
+    refreshUserUI();
   </script>
 </body>
 </html>

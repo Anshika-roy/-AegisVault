@@ -3,14 +3,16 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth
 import { getFirestore, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
+const runtimeFirebaseConfig = globalThis.__FIREBASE_CONFIG__ || {};
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDdZyMEn01tiYxf1Tl4VMB7qJBVu_is0Lw",
-  authDomain: "aegisvault-5377f.firebaseapp.com",
-  projectId: "aegisvault-5377f",
-  storageBucket: "aegisvault-5377f.firebasestorage.app",
-  messagingSenderId: "998097234377",
-  appId: "1:998097234377:web:c6fa924303f5f19a5ee018",
-  measurementId: "G-JV0D6MGHXH"
+  apiKey: runtimeFirebaseConfig.apiKey || "",
+  authDomain: runtimeFirebaseConfig.authDomain || "",
+  projectId: runtimeFirebaseConfig.projectId || "",
+  storageBucket: runtimeFirebaseConfig.storageBucket || "",
+  messagingSenderId: runtimeFirebaseConfig.messagingSenderId || "",
+  appId: runtimeFirebaseConfig.appId || "",
+  measurementId: runtimeFirebaseConfig.measurementId || ""
 };
 
 export const app = initializeApp(firebaseConfig);

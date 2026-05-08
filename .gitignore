@@ -1,15 +1,6 @@
-# Environment Variables - CRITICAL
-.env
-.env.local
-.env.*.local
-.env.production.local
-.env.development.local
 
-# Firebase & API Credentials
-firebase-config.js
-supabase-config.js
-firebase-key.json
-*.credentials.json
+
+
 
 # Node Modules
 node_modules/
@@ -61,8 +52,12 @@ coverage/
 *.sql.backup
 
 # Local Development
+.env
+.env.*
+*.local
 .env.*.js
 local-config.js
+local-config.*
 
 # Sensitive Data - Never commit
 *.pem
