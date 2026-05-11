@@ -4,7 +4,7 @@ AegisVault is a litigation intelligence and secure legal operations platform bui
 
 It is not a generic chatbot. It is designed to feel like institutional legal software: structured dashboards, jurisdiction intelligence, BNS workflow adaptation, encrypted case communication, and role-based workspaces for lawyers and clients.
 
-Live demo: https://aegisvault-liard.vercel.app
+Live demo: https://aegisvault-legal-intel.vercel.app
 
 ## What It Does
 
@@ -141,6 +141,7 @@ Some analytics tables use seeded sample metrics so the hackathon demo is stable.
 ```bash
 npm run dev       # start Vite locally
 npm run lint      # run frontend lint
+npm test          # run jurisdiction reasoning regression tests
 npm run build     # type-check and build
 npm run start     # preview built frontend
 ```

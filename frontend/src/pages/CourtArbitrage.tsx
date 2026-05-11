@@ -33,6 +33,31 @@ interface CourtRecommendation {
   badge: string
 }
 
+interface AnalysisMeta {
+  classification?: {
+    domain: string
+    case_type: string
+    urgency: string
+    jurisdiction_notes: string
+  }
+  confidence?: {
+    level: string
+    range: string
+    explanation: string
+  }
+  reasoning_trace?: {
+    allowed_states: string[]
+    hard_filter_applied: boolean
+    policy_rule: string
+  }
+  rejected_courts?: Array<{
+    court_name: string
+    state: string
+    reason: string
+  }>
+  overall_strategy?: string
+}
+
 /* ─── Fallback Data ─── */
 const FALLBACK_COURTS: CourtData[] = [
   { court_name: 'Delhi High Court', state: 'Delhi', velocity_score: 82, injunction_rate: 71, pendency_days: 340 },
@@ -224,6 +249,7 @@ export default function CourtArbitrage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState('')
   const [recommendations, setRecommendations] = useState<CourtRecommendation[]>([])
+  const [analysisMeta, setAnalysisMeta] = useState<AnalysisMeta | null>(null)
   const [compareSlots, setCompareSlots] = useState<[string | null, string | null]>([null, null])
   const recsRef = useRef<HTMLDivElement>(null)
 
@@ -271,6 +297,7 @@ export default function CourtArbitrage() {
     setAnalyzing(true)
     setAnalyzeError('')
     setRecommendations([])
+    setAnalysisMeta(null)
     try {
       const { data, error } = await supabase.functions.invoke('court-arbitrage', {
         body: { case_summary: summary.trim(), client_state: stateFilter === 'No preference' ? null : stateFilter },
@@ -304,6 +331,13 @@ export default function CourtArbitrage() {
       })
 
       setRecommendations(enriched)
+      setAnalysisMeta({
+        classification: data?.classification,
+        confidence: data?.confidence,
+        reasoning_trace: data?.reasoning_trace,
+        rejected_courts: data?.rejected_courts || [],
+        overall_strategy: data?.overall_strategy,
+      })
       setTimeout(() => recsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
     } catch (err: unknown) {
       setAnalyzeError(err instanceof Error ? err.message : 'Analysis failed')
@@ -376,6 +410,55 @@ export default function CourtArbitrage() {
               {recommendations.slice(0, 3).map((rec, i) => (
                 <RecommendationCard key={rec.court_name} rec={{ ...rec, rank: i + 1 }} index={i} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {analysisMeta && (
+          <div className="bg-[#0f0f0f] border border-white/5 rounded-lg p-5 mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted mb-1">Case Type</p>
+                <p className="text-sm font-semibold text-white">{analysisMeta.classification?.case_type?.replace('_', ' ') || 'civil'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted mb-1">Confidence</p>
+                <p className="text-sm font-semibold text-white">
+                  {analysisMeta.confidence?.level || 'moderate'} ({analysisMeta.confidence?.range || '55-70'})
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted mb-1">Hard Filter</p>
+                <p className="text-sm font-semibold text-white">
+                  {analysisMeta.reasoning_trace?.hard_filter_applied ? 'Applied' : 'Insufficient facts'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-white/80 leading-relaxed mb-4">
+              {analysisMeta.overall_strategy}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-[#151515] rounded p-3 border border-white/5">
+                <p className="text-[10px] uppercase tracking-wider text-muted mb-2">Valid territorial anchors</p>
+                <p className="text-xs text-white">
+                  {(analysisMeta.reasoning_trace?.allowed_states || []).join(', ') || 'Needs more facts'}
+                </p>
+              </div>
+              <div className="bg-[#151515] rounded p-3 border border-white/5">
+                <p className="text-[10px] uppercase tracking-wider text-muted mb-2">Rejected court examples</p>
+                <ul className="space-y-1">
+                  {(analysisMeta.rejected_courts || []).slice(0, 3).map(court => (
+                    <li key={court.court_name} className="text-xs text-muted">
+                      <span className="text-white">{court.court_name}</span>: {court.reason}
+                    </li>
+                  ))}
+                  {(analysisMeta.rejected_courts || []).length === 0 && (
+                    <li className="text-xs text-muted">No hard rejection because facts are incomplete.</li>
+                  )}
+                </ul>
+              </div>
             </div>
           </div>
         )}
