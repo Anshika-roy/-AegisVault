@@ -23,12 +23,23 @@ interface ProbabilityResult {
   success_probability: number
   confidence_level: string
   verdict_prediction: string
+  case_category?: string
   factors: Record<string, Factor>
   similar_cases: SimilarCase[]
   risk_factors: string[]
   recommended_strategy: string
   estimated_duration: string
   optimal_court: string
+  score_explainability?: Array<{
+    label: string
+    impact: number
+    type: 'positive' | 'negative'
+    reason: string
+  }>
+  scoring_model?: {
+    version: string
+    note: string
+  }
 }
 
 /* ─── Constants ─── */
@@ -48,6 +59,7 @@ const factorText = (s: number) => s >= 65 ? 'text-green-400' : s >= 45 ? 'text-a
 const factorMeta: Record<string, { label: string; icon: React.ElementType }> = {
   jurisdiction_advantage: { label: 'Jurisdiction Advantage', icon: Gavel },
   precedent_strength: { label: 'Precedent Strength', icon: BookOpen },
+  procedural_compliance: { label: 'Procedural Compliance', icon: Scale },
   relief_likelihood: { label: 'Relief Likelihood', icon: Shield },
   timeline_risk: { label: 'Timeline Risk', icon: Clock },
   evidence_strength: { label: 'Evidence Strength', icon: BarChart3 },
@@ -161,6 +173,11 @@ export default function LitigationEngine() {
                 {result.success_probability}%
               </motion.p>
               <div className="flex items-center justify-center gap-4 mt-4">
+                {result.case_category && (
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-muted">
+                    {result.case_category.replace('_', ' ').toUpperCase()}
+                  </span>
+                )}
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                   result.confidence_level === 'high' ? 'bg-green-500/15 text-green-400' :
                   result.confidence_level === 'moderate' ? 'bg-amber-500/15 text-amber-400' :
@@ -177,6 +194,12 @@ export default function LitigationEngine() {
                 </span>
               </div>
 
+              {result.scoring_model?.note && (
+                <p className="text-xs text-muted mt-5 max-w-2xl mx-auto leading-relaxed">
+                  {result.scoring_model.note}
+                </p>
+              )}
+
               {/* Duration + court */}
               <div className="flex items-center justify-center gap-6 mt-5">
                 {result.estimated_duration && (
@@ -191,6 +214,29 @@ export default function LitigationEngine() {
                 )}
               </div>
             </div>
+
+            {/* Score Explainability */}
+            {result.score_explainability && result.score_explainability.length > 0 && (
+              <div className="bg-[#111111] border border-[#1a1a1a] rounded-xl p-5 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-bold text-white">Score Explainability</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {result.score_explainability.map((item, i) => (
+                    <div key={`${item.label}-${i}`} className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] border border-white/5 p-3">
+                      <div>
+                        <p className="text-xs text-white font-medium">{item.label.replaceAll('_', ' ')}</p>
+                        <p className="text-[11px] text-muted mt-0.5">{item.reason}</p>
+                      </div>
+                      <span className={`text-xs font-bold shrink-0 ${item.impact >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {item.impact >= 0 ? '+' : ''}{item.impact}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Factor Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
