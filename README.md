@@ -21,7 +21,7 @@ Live demo: https://aegisvault-liard.vercel.app
 | Frontend | React, TypeScript, Vite, TailwindCSS, Framer Motion |
 | Backend | Supabase, PostgreSQL, Row Level Security |
 | Serverless | Supabase Edge Functions |
-| AI | LLaMA via Groq API |
+| AI | LLaMA 120B Model |
 | Security | Supabase Auth, RLS, client-side AES-GCM message encryption |
 | Deployment | Vercel for frontend, Supabase for backend |
 | Local Runtime | Node.js or Docker |
