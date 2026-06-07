@@ -1,46 +1,54 @@
-# AegisVault 🛡️⚖️
+# AegisVault
 
 <div align="center">
-  <p><strong>Secure Litigation Intelligence & Operations Platform for Indian Legal Workflows</strong></p>
+  <p><strong>Enterprise Litigation Intelligence & Secure Operations Platform</strong></p>
   
-  <a href="https://aegisvault-liard.vercel.app/" target="_blank">
-    <img src="https://img.shields.io/badge/Launch%20AegisVault%20🚀-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Launch Web App" height="42" />
+  <a href="https://aegisvault-liard.vercel.app/" style="text-decoration: none;">
+    <img src="https://img.shields.io/badge/Launch%20Platform-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Launch Application" />
+  </a>
+  &nbsp;
+  <a href="https://github.com/Anshika-roy/-AegisVault/blob/main/LICENSE" style="text-decoration: none;">
+    <img src="https://img.shields.io/badge/License-MIT-555555?style=for-the-badge" alt="License" />
   </a>
   
   <br/><br/>
   
-  <img src="https://img.shields.io/badge/Status-Production%20Ready-31C48D?style=flat-square" />
-  <img src="https://img.shields.io/badge/Stack-React%20%7C%20Supabase%20%7C%20TypeScript-4F46E5?style=flat-square" />
-  <img src="https://img.shields.io/badge/Security-AES--256--GCM%20E2EE-10B981?style=flat-square" />
-  <img src="https://img.shields.io/badge/Build-Passing-brightgreen?style=flat-square" />
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-2E7D32?style=flat-square" />
+  <img src="https://img.shields.io/badge/Stack-React%20%7C%20Supabase%20%7C%20TypeScript-1565C0?style=flat-square" />
+  <img src="https://img.shields.io/badge/Security-AES--256--GCM%20E2EE-37474F?style=flat-square" />
+  <img src="https://img.shields.io/badge/CI%2FCD-Passing-2E7D32?style=flat-square" />
 </div>
 
 ---
 
 <p align="center">
-  <img src="frontend/public/dashboard-preview.png" alt="AegisVault Dashboard Mockup" width="85%" style="border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);" />
+  <img src="frontend/public/dashboard-preview.png" alt="AegisVault Dashboard" width="85%" style="border-radius: 6px; border: 1px solid #222;" />
 </p>
 
-AegisVault transitions legal operations from chaotic, unsecure communication channels into an institutional, security-first digital workspace. Built for counsel and clients to navigate legal reasoning, document analysis, and secure case operations seamlessly.
+AegisVault transitions legal proceedings from fragmented email threads into a centralized, security-first digital workspace. The platform empowers legal counsel and corporate clients with advanced litigation intelligence, statutory analytics, and zero-knowledge encrypted communications.
 
 ---
 
-## 🏛️ Key System Modules
+## 🏛️ System Overview & Core Capabilities
 
-### 1. 🔍 Legally Grounded Jurisdiction Intelligence
-Ensures precise jurisdictional advice instead of vague recommendation algorithms:
-*   **Statutory Mapping**: Filters filings to correct territorial High Courts using case parameters.
-*   **Section 142(2)(a) Compliance**: Direct evaluation of Negotiable Instruments Act standards, anchoring cheque bounce matters to the payee's bank branch.
-*   **Calibration & Refusal**: Calculates certainty scores and declines to suggest forums when factual information is ambiguous.
+### 1. B2B Case Workspaces
+- **Counsel Dashboard**: Real-time litigation overview, caseload analytics, case request evaluation, and centralized client directory.
+- **Client Workspace**: Straightforward interface to request legal representation, upload matter summaries, and track matter status.
 
-### 2. 🔐 Zero-Trust Case Security & E2EE
-Attorney-client privilege is secured using zero-knowledge client-side encryption:
-*   **Client-Side Cryptography**: Encrypts messages directly in the browser via **AES-256-GCM** prior to network transmission.
-*   **User-Configured Passphrases**: Keys are derived locally on-device using PBKDF2 with custom case passwords and a dynamic salt.
-*   **Row-Level Security (RLS)**: PostgreSQL tables are locked down with policies matching `auth.uid()` against profile assignments.
+### 2. Legal Grounding & Jurisdiction Intelligence
+Unlike generic chat models, AegisVault evaluates litigation parameters against real Indian statutory anchors:
+- **Negotiable Instruments Act (Sec. 142(2)(a))**: Automatically aligns cheque bounce matters to the payee's home bank branch.
+- **Territorial Jurisdictions**: Anchors cases directly to the correct High Courts based on physical location and cause-of-action parameters.
+- **Certainty Calibration**: refusal parameters block recommendation outputs when factual context is insufficient, preventing hallucinations.
 
-### 3. 🧠 IPC-to-BNS Transposition
-Smoothly transposes traditional Indian Penal Code (IPC) references into Bharatiya Nyaya Sanhita (BNS) workflow changes, displaying semantic shifts, precedent risks, and process updates.
+### 3. Client-Side End-to-End Encryption
+To safeguard attorney-client privilege:
+- **AES-256-GCM Cryptography**: Chat messages are encrypted client-side in the browser before being written to the database.
+- **PBKDF2 Key Derivation**: Encryption keys are derived locally using user-defined case passwords and a dynamic salt.
+- **Row-Level Security (RLS)**: PostgreSQL tables are locked down with policies matching `auth.uid()` against profile assignments.
+
+### 4. IPC-to-BNS Transposition
+Adapts traditional Indian Penal Code (IPC) and Code of Criminal Procedure (CrPC) sections into Bharatiya Nyaya Sanhita (BNS) workflow changes, displaying semantic shifts, precedent risks, and process updates.
 
 ---
 
@@ -60,13 +68,15 @@ graph TD
 
 ---
 
-## 💻 Tech Stack Highlights
+## 💻 Technology Stack
 
-*   **Frontend**: React 19, TypeScript, Vite, TailwindCSS, Framer Motion
-*   **Backend & Security**: Supabase Auth, PostgreSQL DB, Row-Level Security
-*   **Serverless**: Supabase Edge Functions (Deno runtime)
-*   **AI Engine**: LLaMA models via Groq API
-*   **Testing**: Node.js Native Test Runner (`node --test`)
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| **Frontend** | React 19, TypeScript, Vite, TailwindCSS, Framer Motion | User interface, client-side encryption, reactive dashboard |
+| **Backend & Database** | Supabase, PostgreSQL | User profile mapping, relational schema storage, and Auth |
+| **Serverless runtime** | Supabase Edge Functions (Deno) | Serverless execution of AI analytical models |
+| **AI Processing** | LLaMA via Groq API | High-speed semantic matching and legal transposition |
+| **Validation** | Node.js Test Runner | Regression testing suite for jurisdiction and risk engines |
 
 ---
 
@@ -74,7 +84,9 @@ graph TD
 
 ```text
 AegisVault/
-├── .github/workflows/    # CI/CD pipelines
+├── .github/
+│   ├── workflows/        # CI/CD pipelines
+│   └── pull_request_template.md
 ├── frontend/             # React single-page application (Vite)
 │   ├── src/
 │   │   ├── components/   # Reusable UI elements (auth, modal, sidebar)
@@ -85,6 +97,8 @@ AegisVault/
 │   ├── functions/        # Serverless Deno Edge Functions
 │   └── migrations/       # PostgreSQL DB schema, triggers, and demo seeds
 ├── tests/                # Regression tests for reasoning engines
+├── LICENSE               # MIT License
+├── CONTRIBUTING.md       # Contribution guidelines
 ├── Dockerfile            # Container definition for frontend build & host
 ├── vercel.json           # Vercel deployment settings
 └── docker-compose.yml    # Single-command local dev environment spin-up
@@ -92,10 +106,10 @@ AegisVault/
 
 ---
 
-## 🚀 Local Setup & Development
+## 🚀 Local Setup & Installation
 
-### 1. Installation
-Clone the repository and install the client dependencies:
+### 1. Clone & Dependencies
+Clone the repository and install client modules:
 ```bash
 git clone https://github.com/Anshika-roy/-AegisVault.git AegisVault
 cd AegisVault
@@ -103,22 +117,22 @@ npm install --prefix frontend
 ```
 
 ### 2. Environment Configuration
-Copy `.env.example` to `.env` and fill in your Supabase variables:
+Create a local `.env` file from the example template:
 ```bash
 cp .env.example .env
 ```
-Provide:
-*   `VITE_SUPABASE_URL`
-*   `VITE_SUPABASE_ANON_KEY`
+Provide the following credentials:
+*   `VITE_SUPABASE_URL`: Your Supabase project URL.
+*   `VITE_SUPABASE_ANON_KEY`: Your Supabase anonymous client key.
 
-### 3. Run Development Server
+### 3. Start Development Server
 ```bash
 npm run dev
 ```
-Open **`http://localhost:5173`** to access the application.
+Open **`http://localhost:5173`** to access the local application.
 
 ### 4. Running Regression Tests
-Verify reasoning model and scoring metrics offline:
+Verify reasoning calculations and scoring weights:
 ```bash
 npm test
 ```
