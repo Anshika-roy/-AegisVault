@@ -4,19 +4,19 @@
   <p><strong>Enterprise Litigation Intelligence & Secure Operations Platform</strong></p>
   
   <a href="https://aegisvault-liard.vercel.app/" style="text-decoration: none;">
-    <img src="https://img.shields.io/badge/Launch%20Platform-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Launch Application" />
+    <img src="https://img.shields.io/badge/Launch%20Platform-000000?style=flat-square&logo=vercel&logoColor=white" alt="Launch Application" />
   </a>
   &nbsp;
   <a href="https://github.com/Anshika-roy/-AegisVault/blob/main/LICENSE" style="text-decoration: none;">
-    <img src="https://img.shields.io/badge/License-MIT-555555?style=for-the-badge" alt="License" />
+    <img src="https://img.shields.io/badge/License-MIT-000000?style=flat-square" alt="License" />
   </a>
   
   <br/><br/>
   
-  <img src="https://img.shields.io/badge/Status-Production%20Ready-2E7D32?style=flat-square" />
-  <img src="https://img.shields.io/badge/Stack-React%20%7C%20Supabase%20%7C%20TypeScript-1565C0?style=flat-square" />
-  <img src="https://img.shields.io/badge/Security-AES--256--GCM%20E2EE-37474F?style=flat-square" />
-  <img src="https://img.shields.io/badge/CI%2FCD-Passing-2E7D32?style=flat-square" />
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-000000?style=flat-square" />
+  <img src="https://img.shields.io/badge/Stack-React%20%7C%20Supabase%20%7C%20TypeScript-000000?style=flat-square" />
+  <img src="https://img.shields.io/badge/Security-AES--256--GCM%20E2EE-000000?style=flat-square" />
+  <img src="https://img.shields.io/badge/CI%2FCD-Passing-000000?style=flat-square" />
 </div>
 
 ---
@@ -29,46 +29,69 @@ AegisVault transitions legal proceedings from fragmented email threads into a ce
 
 ---
 
-## 🏛️ System Overview & Core Capabilities
+## Table of Contents
+
+- [System Overview & Core Capabilities](#system-overview--core-capabilities)
+- [Architecture & Data Flow](#architecture--data-flow)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Local Setup & Installation](#local-setup--installation)
+- [Security Audit & Policies](#security-audit--policies)
+
+---
+
+## System Overview & Core Capabilities
 
 ### 1. B2B Case Workspaces
-- **Counsel Dashboard**: Real-time litigation overview, caseload analytics, case request evaluation, and centralized client directory.
-- **Client Workspace**: Straightforward interface to request legal representation, upload matter summaries, and track matter status.
+*   **Counsel Dashboard**: Real-time litigation overview, caseload analytics, case request evaluation, and centralized client directory.
+*   **Client Workspace**: Straightforward interface to request legal representation, upload matter summaries, and track matter status.
 
 ### 2. Legal Grounding & Jurisdiction Intelligence
 Unlike generic chat models, AegisVault evaluates litigation parameters against real Indian statutory anchors:
-- **Negotiable Instruments Act (Sec. 142(2)(a))**: Automatically aligns cheque bounce matters to the payee's home bank branch.
-- **Territorial Jurisdictions**: Anchors cases directly to the correct High Courts based on physical location and cause-of-action parameters.
-- **Certainty Calibration**: refusal parameters block recommendation outputs when factual context is insufficient, preventing hallucinations.
+*   **Negotiable Instruments Act (Sec. 142(2)(a))**: Automatically aligns cheque bounce matters to the payee's home bank branch.
+*   **Territorial Jurisdictions**: Anchors cases directly to the correct High Courts based on physical location and cause-of-action parameters.
+*   **Certainty Calibration**: refusal parameters block recommendation outputs when factual context is insufficient, preventing hallucinations.
 
 ### 3. Client-Side End-to-End Encryption
 To safeguard attorney-client privilege:
-- **AES-256-GCM Cryptography**: Chat messages are encrypted client-side in the browser before being written to the database.
-- **PBKDF2 Key Derivation**: Encryption keys are derived locally using user-defined case passwords and a dynamic salt.
-- **Row-Level Security (RLS)**: PostgreSQL tables are locked down with policies matching `auth.uid()` against profile assignments.
+*   **AES-256-GCM Cryptography**: Chat messages are encrypted client-side in the browser before being written to the database.
+*   **PBKDF2 Key Derivation**: Encryption keys are derived locally using user-defined case passwords and a dynamic salt.
+*   **Row-Level Security (RLS)**: PostgreSQL tables are locked down with policies matching `auth.uid()` against profile assignments.
 
 ### 4. IPC-to-BNS Transposition
 Adapts traditional Indian Penal Code (IPC) and Code of Criminal Procedure (CrPC) sections into Bharatiya Nyaya Sanhita (BNS) workflow changes, displaying semantic shifts, precedent risks, and process updates.
 
 ---
 
-## ⚙️ Architecture & Data Flow
+## Architecture & Data Flow
 
 ```mermaid
 graph TD
-    User([Counsel / Client]) -->|Vite + React App| FE[Frontend Client]
-    FE -->|Supabase Auth| Auth[Auth Service]
+    %% Custom Node Styling
+    classDef client fill:#0f172a,stroke:#334155,stroke-width:1px,color:#f8fafc;
+    classDef server fill:#1e293b,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    classDef external fill:#020617,stroke:#1e293b,stroke-width:1px,color:#94a3b8;
+
+    User([Counsel / Client]):::client
+    FE[Frontend Client]:::client
+    Auth[Auth Service]:::server
+    DB[(Supabase DB)]:::server
+    Edge[Supabase Edge Functions]:::server
+    AI[AI Reasoning Engines]:::server
+    Groq[Groq API]:::external
+
+    User -->|Vite + React App| FE
+    FE -->|Supabase Auth| Auth
     FE -->|AES-GCM Local Encryption/Decryption| FE
-    FE -->|PostgreSQL Queries| DB[(Supabase DB)]
-    DB -->|Enforces| RLS[Row Level Security]
-    FE -->|REST API Calls| Edge[Supabase Edge Functions]
-    Edge -->|Deno Runtime| AI[AI Reasoning Engines]
-    AI -->|LLaMA Inference| Groq[Groq API]
+    FE -->|PostgreSQL Queries| DB
+    FE -->|REST API Calls| Edge
+    Edge -->|Deno Runtime| AI
+    AI -->|LLaMA Inference| Groq
 ```
 
 ---
 
-## 💻 Technology Stack
+## Technology Stack
 
 | Layer | Technology | Purpose |
 | --- | --- | --- |
@@ -80,7 +103,7 @@ graph TD
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 AegisVault/
@@ -106,7 +129,7 @@ AegisVault/
 
 ---
 
-## 🚀 Local Setup & Installation
+## Local Setup & Installation
 
 ### 1. Clone & Dependencies
 Clone the repository and install client modules:
@@ -139,7 +162,7 @@ npm test
 
 ---
 
-## 🛡️ Security Audit & Policies
+## Security Audit & Policies
 
 *   **Zero Server Plaintext**: Messages are encrypted via client keys and never stored in plain-text on Supabase.
 *   **Granular RLS**: Clients can only query rows where `client_id = auth.uid()`, and lawyers where `assigned_lawyer_id = auth.uid()`.
