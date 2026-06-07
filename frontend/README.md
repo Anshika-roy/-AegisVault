@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+# AegisVault Frontend Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains the single-page application (SPA) client for AegisVault. It is built using React, TypeScript, and Vite, and styled with Vanilla CSS and TailwindCSS.
 
-Currently, two official plugins are available:
+## Directory Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **`src/components/`**: Reusable UI blocks, layout components, and modals.
+  - `AuthModals.tsx`: Combined sign-in and sign-up modal handlers.
+  - `Modal.tsx`: Accessible dialog wrapper.
+  - `ProtectedRoute.tsx`: Router guard enforcing active Supabase sessions.
+  - `Sidebar.tsx`: Persistent navigation sidebar.
+- **`src/hooks/`**: Custom hooks for handling global operations.
+  - `useAuth.ts`: Hook mapping Supabase Auth sessions to global state.
+  - `useDashboardData.ts`: React state hooks for querying and formatting analytics.
+- **`src/lib/`**: Config and client setup files.
+  - `supabase.ts`: Supabase client client initialization.
+  - `types.ts`: TypeScript interface definitions for database records and payloads.
+  - `utils.ts`: Utility helpers for TailwindCSS merging.
+- **`src/pages/`**: Main dashboard pages and analytics layouts.
+  - `LandingPage.tsx`: Product marketing homepage with the preview dashboard mockup.
+  - `LawyerDashboard.tsx` & `ClientDashboard.tsx`: Secure user-role workspaces.
+  - `CourtArbitrage.tsx`: Panel comparing territorial High Court performance and metrics.
+  - `LitigationEngine.tsx`: Interactive legal assessment panel.
+  - `JudicialIntelligence.tsx`: Deep-dive data explorer for court precedents.
+  - `CrossExamSimulator.tsx`: AI-assisted cross-examination prep.
+  - `Chat.tsx`: End-to-end client-side encrypted messaging channel.
 
-## React Compiler
+## Local Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Start the development server with Hot Module Replacement (HMR):
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Build the application for production (results outputted to `dist/`):
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Security Design (Client-Side Encryption)
+
+The messaging component (`Chat.tsx`) implements browser-native Web Crypto APIs (**AES-GCM**) to secure messages. Messages are encrypted locally using derived client-side key combinations before transmission, ensuring that the Supabase database hosting the backend never contains plain-text communication.

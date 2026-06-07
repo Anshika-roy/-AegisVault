@@ -10,13 +10,14 @@ import { useAuth } from '@/hooks/useAuth'
 /* ═══════════════════════════════════════════════════════
    ENCRYPTION — AES-256-GCM via Web Crypto API
    ═══════════════════════════════════════════════════════ */
-async function deriveKey(requestId: string): Promise<CryptoKey> {
+async function deriveKey(requestId: string, passphrase?: string): Promise<CryptoKey> {
   const enc = new TextEncoder()
+  const secret = passphrase || `aegis-demo-${requestId}`
   const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(requestId), 'PBKDF2', false, ['deriveKey']
+    'raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey']
   )
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: enc.encode('aegisvault-e2ee'), iterations: 100000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: enc.encode(requestId), iterations: 100000, hash: 'SHA-256' },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -111,6 +112,12 @@ export default function Chat() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
 
+  const [passphrase, setPassphrase] = useState<string>(() => {
+    return sessionStorage.getItem(`aegisvault-passphrase-${requestId}`) || ''
+  })
+  const [customPassphraseInput, setCustomPassphraseInput] = useState('')
+  const [showPassphraseModal, setShowPassphraseModal] = useState(false)
+
   const cryptoKeyRef = useRef<CryptoKey | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -121,8 +128,8 @@ export default function Chat() {
 
   useEffect(() => {
     if (!requestId) return
-    deriveKey(requestId).then(key => { cryptoKeyRef.current = key })
-  }, [requestId])
+    deriveKey(requestId, passphrase).then(key => { cryptoKeyRef.current = key })
+  }, [requestId, passphrase])
 
   useEffect(() => {
     if (!requestId || !user) return
@@ -160,7 +167,7 @@ export default function Chat() {
         if (msgErr) throw msgErr
         if (cancelled) return
 
-        const key = cryptoKeyRef.current || await deriveKey(requestId)
+        const key = cryptoKeyRef.current || await deriveKey(requestId, passphrase)
         cryptoKeyRef.current = key
         const decrypted = await Promise.all(
           (msgData || []).map(async (m: Message) => ({
@@ -178,7 +185,7 @@ export default function Chat() {
     }
     fetchData()
     return () => { cancelled = true }
-  }, [requestId, user, scrollBottom])
+  }, [requestId, user, scrollBottom, passphrase])
 
   useEffect(() => {
     if (!requestId) return
@@ -327,6 +334,28 @@ export default function Chat() {
           </div>
         </div>
 
+        {/* E2EE Key Customization */}
+        <div className="px-5 py-4 bg-[#090909] border-t border-white/5 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted font-medium uppercase tracking-wider">Secret Chat Key</span>
+            <button
+              onClick={() => {
+                setCustomPassphraseInput(passphrase || `aegis-demo-${requestId?.slice(0, 8)}`)
+                setShowPassphraseModal(true)
+              }}
+              className="text-[10px] text-blue-400 hover:text-blue-300 bg-transparent border-none cursor-pointer"
+            >
+              Configure
+            </button>
+          </div>
+          <div className="bg-[#111] border border-white/5 px-2.5 py-1.5 rounded flex items-center justify-between font-mono text-[10px]">
+            <span className="text-muted truncate max-w-[150px]">
+              {passphrase ? '••••••••' : `aegis-demo-${requestId?.slice(0, 8)} (Demo Fallback)`}
+            </span>
+            <Lock className="w-3 h-3 text-muted/50 shrink-0" />
+          </div>
+        </div>
+
         {/* Encryption notice */}
         <div className="px-5 py-4 bg-[#050505] border-t border-white/5">
           <div className="flex items-center gap-2 mb-1.5">
@@ -447,6 +476,82 @@ export default function Chat() {
           </div>
         </div>
       </div>
+
+      {showPassphraseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Configure Case Secret Key</h3>
+                <p className="text-muted/60 text-[10px]">End-to-End Client-Side Encryption</p>
+              </div>
+            </div>
+            <p className="text-muted text-xs leading-relaxed mb-4">
+              AegisVault chat messages are encrypted directly in your browser. To read and write, both the client and lawyer must configure the <strong>same key passphrase</strong>. This secret is never shared with our servers.
+            </p>
+            <div className="mb-4">
+              <label className="block text-[10px] text-muted font-medium uppercase tracking-wider mb-1.5">
+                Passphrase
+              </label>
+              <input
+                type="text"
+                value={customPassphraseInput}
+                onChange={e => setCustomPassphraseInput(e.target.value)}
+                placeholder="Enter secret case key"
+                className="w-full px-3 py-2 rounded-md text-sm text-white bg-[#111] border border-white/10 outline-none focus:border-white/30"
+              />
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => setShowPassphraseModal(false)}
+                className="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-transparent border border-white/10 text-muted hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const val = customPassphraseInput.trim()
+                  if (val) {
+                    sessionStorage.setItem(`aegisvault-passphrase-${requestId}`, val)
+                    setPassphrase(val)
+                    const derived = await deriveKey(requestId || '', val)
+                    cryptoKeyRef.current = derived
+                    if (requestId) {
+                      setLoading(true)
+                      try {
+                        const { data: msgData, error: msgErr } = await supabase
+                          .from('messages')
+                          .select('*')
+                          .eq('request_id', requestId)
+                          .order('created_at', { ascending: true })
+                        if (msgErr) throw msgErr
+                        const decrypted = await Promise.all(
+                          (msgData || []).map(async (m: Message) => ({
+                            ...m,
+                            decrypted: m.iv ? await decryptMessage(m.content_encrypted, m.iv, derived) : m.content_encrypted,
+                          }))
+                        )
+                        setMessages(decrypted)
+                      } catch (err: unknown) {
+                        setError(err instanceof Error ? err.message : 'Failed to reload chat')
+                      } finally {
+                        setLoading(false)
+                      }
+                    }
+                  }
+                  setShowPassphraseModal(false)
+                }}
+                className="px-4 py-1.5 rounded-md text-xs font-semibold bg-white text-black hover:bg-neutral-200 transition-colors cursor-pointer"
+              >
+                Apply Key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
