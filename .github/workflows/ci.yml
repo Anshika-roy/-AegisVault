@@ -23,13 +23,16 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies
-        run: npm ci --prefix frontend
+        working-directory: frontend
+        run: npm ci
 
       - name: Run Code Linter
+        working-directory: frontend
         run: npm run lint
 
       - name: Run Legal Engine Regression Tests
         run: npm test
 
       - name: Verify Production Build
+        working-directory: frontend
         run: npm run build
